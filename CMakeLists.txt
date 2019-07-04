@@ -19,7 +19,7 @@ project(httpservpp
 )
 option(BUILD_TEST   "Build project with test"   OFF)
 option(INSTALL_DEPS "Install dependensies"      OFF)
-
+include(cmake/toolchain_conf.cmake)
 include(cmake/packages.cmake)
 include(cmake/src.cmake)
 include(cmake/ide.cmake)
