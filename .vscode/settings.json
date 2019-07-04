@@ -1,0 +1,6 @@
+{
+    "cmake.configureArgs": [
+        "-DCMAKE_INSTALL_PREFIX=../stage",
+        "-Wno-dev"
+    ]
+}
