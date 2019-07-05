@@ -44,10 +44,10 @@ foreach(header ${headers})
         DESTINATION ${inst_des})
 endforeach()
 
-# install(
-#     DIRECTORY include 
-#     DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT Develop
-# )
+install(
+    DIRECTORY include 
+    DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT Develop
+)
 install(
     EXPORT ${AKT_TARGETS_EXPORT}
     NAMESPACE ${AKT_NAMESPACE}
@@ -57,5 +57,11 @@ if(INSTALL_DEPS)
     install(
         SCRIPT ${CMAKE_BINARY_DIR}/bundle.cmake
         COMPONENT Dependencies
+    )
+endif()
+if(BUILD_TEST)
+    install(
+        DIRECTORY test_data/
+        DESTINATION test_data/httpservpp
     )
 endif()

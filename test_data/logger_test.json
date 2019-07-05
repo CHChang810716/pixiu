@@ -1,0 +1,11 @@
+{
+    "level": "info",
+    "loggers": {
+        "test_1": {
+            "level": "error"
+        },
+        "test_2": {
+            "level": "trace"
+        }
+    }
+}

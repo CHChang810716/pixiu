@@ -1,6 +1,8 @@
 {
     "cmake.configureArgs": [
         "-DCMAKE_INSTALL_PREFIX=../stage",
-        "-Wno-dev"
-    ]
+        "-Wno-dev",
+        "-DBUILD_TEST=ON"
+    ],
+    "cmake.configureOnOpen": true
 }
