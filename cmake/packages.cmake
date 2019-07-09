@@ -26,5 +26,15 @@ find_package(Boost
     CONFIG
     REQUIRED
 )
+find_package(OpenSSL REQUIRED)
+get_property(tmp_include_dirs
+  TARGET OpenSSL::SSL
+  PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+)
+foreach(tmp_i ${tmp_include_dirs})
+    list(APPEND AKT_VSCODE_C_CPP_INCLUDES "\"${tmp_i}\"")
+endforeach()
+unset(tmp_include_dirs)
+
 
 find_package(Threads REQUIRED)
