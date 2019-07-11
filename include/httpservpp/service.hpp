@@ -52,32 +52,17 @@ public:
   }
 
   void async_accept() {
-    auto on_accept = [_self = shared_from_this()](const error_code& ec) {
+    auto on_accept = [_self = shared_from_this()](error_code ec) {
       if(ec) {
         logger().error("accept failed");
         return ;
       }
-      _self->async_post_session();
+      _self->async_post_session(std::move(_self->socket_));
     };
     acceptor_.async_accept(socket_, on_accept);
   }
 private:
-  void async_post_session() {
-    auto on_detect_ssl = [_self = shared_from_this()](const error_code& ec, boost::tribool res) {
-      if(ec) {
-        logger().error("ssl detect fail");
-        return ;
-      }
-      session_ptr sapi;
-      if(res) {
-        sapi = std::make_shared<session::https>();
-      } else {
-        sapi = std::make_shared<session::http>();
-      }
-    };
-    boost::beast::async_detect_ssl(
-      socket_, ssl_det_buffer_, on_detect_ssl
-    );
+  static void async_post_session(tcp_socket socket) {
   }
   PMEM_GET(io_context*,       ioc)
   VMEM_GET(tcp_acceptor,      acceptor)
