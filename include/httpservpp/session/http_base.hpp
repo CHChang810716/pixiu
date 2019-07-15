@@ -61,7 +61,7 @@ private:
 protected:
   template<class Derived>
   void set_request_timeout_handler(Derived& derived) {
-    auto on_timeout = [_self = shared_from_this()](auto ec) {
+    auto on_timeout = [derived, this](auto ec) {
       if(ec && ec != __asio::error::operation_aborted) {
         logger().error("timer error");
         return ;
@@ -69,7 +69,7 @@ protected:
       if(req_timer_.expiry() > std::chrono::steady_clock::now() ) {
         return ;
       }
-      derived.do_request_timeout();
+      derived->do_request_timeout();
     };
     req_timer_.async_wait(
       make_seq_req_handler(on_timeout)
@@ -81,8 +81,7 @@ protected:
   
   template<class Http>
   void async_recv_request(Http derived) {
-    using namespace _als;
-    auto on_recv_request = [derived](error_code ec) {
+    auto on_recv_request = [derived, this](error_code ec, std::size_t bytes_transf) -> void {
       // timer close socket
       if(ec == __asio::error::operation_aborted)
         return;
@@ -94,7 +93,7 @@ protected:
 
       this->pending_req_num_ += 1;
 
-      request_handler_ptr->operator()(
+      request_handler_->operator()(
         std::move(derived->req_), 
         [derived](auto response) {
           derived->async_send_response(std::move(response));
@@ -110,8 +109,9 @@ protected:
     __http::async_read(
       derived->stream(), 
       derived->recv_buffer(), 
-      req_, make_seq_req_handler(on_recv_request)
-    )
+      req_, 
+      make_seq_req_handler(on_recv_request)
+    );
   }
   template<class Http, bool isRequest, class Body, class Fields>
   void async_send_response(
@@ -119,7 +119,7 @@ protected:
     __http::message<isRequest, Body, Fields> msg
   ) {
     auto on_send_response = 
-    [derived](error_code ec, bool close) {
+    [derived, this](error_code ec, bool close) {
       if(ec == __asio::error::operation_aborted)
         return;
       if(ec)

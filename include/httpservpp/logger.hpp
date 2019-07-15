@@ -29,12 +29,13 @@ private:
 public:
   static void config(const boost::filesystem::path& fp) {
     std::ifstream fin(fp.string());
-    nlohmann::json config;
-    fin >> config;
-    auto global_level_str = config.at("level").get<std::string>();
-    // console_sink()->set_level(spdlog::level::from_str(global_level_str));
-    // file_sink()->set_level(spdlog::level::from_str(global_level_str));
-    auto& loggers = config.at("loggers");
+    nlohmann::json data;
+    fin >> data;
+    config(std::move(data));
+  }
+  static void config(nlohmann::json data = nlohmann::json::object()) {
+    auto global_level_str = data.value("level", "info");
+    auto loggers = data.value("loggers", nlohmann::json({}));
     for(auto itr = loggers.begin(); itr != loggers.end(); itr ++ ) {
       auto mod = itr.key();
       auto& param = *itr;
@@ -45,6 +46,7 @@ public:
       spdlog::register_logger(logger);
     }
     spdlog::register_logger(make_log("default", "info"));
+
   }
   static spdlog::logger& get(const std::string& mod) {
     auto ptr = spdlog::get(mod);

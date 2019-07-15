@@ -13,7 +13,7 @@ private:
     config inst;
     inst.request_timeout_         = std::chrono::seconds(15);
     inst.use_ssl_                 = false;
-    inst.port_                    = 8080;
+    // inst.port_                    = 8080;
     inst.max_pending_request_num_ = 16;
     return inst;
   }

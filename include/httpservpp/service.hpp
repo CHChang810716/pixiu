@@ -67,13 +67,13 @@ public:
 private:
   void async_post_session() {
     logger().debug("session run");
-    auto session_ptr = std::make_shared<session::plain_http>(
+    session_ptr p_session = std::make_shared<session::plain_http>(
       *ioc_, 
       std::move(socket_),
       req_handler_,
       std::move(recv_buffer_)
     );
-    session_ptr->async_recv_request();
+    p_session->async_handle_requests();
   }
   PMEM_GET(io_context*,         ioc           )
   VMEM_GET(tcp_acceptor,        acceptor      )

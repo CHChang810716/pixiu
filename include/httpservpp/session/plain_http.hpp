@@ -1,16 +1,20 @@
 #pragma once
 #include "http_base.hpp"
 #include <boost/asio/ip/tcp.hpp>
+#include "interface.hpp"
 namespace httpservpp::session {
-
+namespace __ip = boost::asio::ip;
 struct plain_http 
 : public http_base 
 , public std::enable_shared_from_this<plain_http> 
+, public interface
 {
+friend http_base;
 private:
   using tcp_socket        = boost::asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
   static auto& logger() { return logger::get("plain_http"); }
+
 public:
   plain_http(
     __asio::io_context&     ioc,
@@ -23,15 +27,30 @@ public:
   , recv_buffer_      (std::move(recv_buffer))
   {}
 
-  void async_recv_request() {
-    return http_base::async_recv_request(shared_from_this());
+  virtual void async_handle_requests() override {
+    this->async_recv_request();
   }
 
-  template<class Http, bool isRequest, class Body, class Fields>
+private:
+  template<bool isRequest, class Body, class Fields>
   void async_send_response(
     __http::message<isRequest, Body, Fields> msg
   ) {
-    return http_base::async_send_response(std::move(msg));
+    return http_base::async_send_response(
+      shared_from_this(), std::move(msg)
+    );
+  }
+  void async_recv_request() {
+    return http_base::async_recv_request(shared_from_this());
+  }
+  void do_eof() {
+    error_code ec;
+    socket_.shutdown(__ip::tcp::socket::shutdown_send, ec);
+  }
+  void do_request_timeout() {
+    boost::system::error_code ec;
+    socket_.shutdown(__ip::tcp::socket::shutdown_both, ec);
+    socket_.close(ec);
   }
   tcp_socket& stream() {
     return socket_;
@@ -39,7 +58,6 @@ public:
   flat_buffer& recv_buffer() {
     return recv_buffer_;
   }
-private:
   tcp_socket          socket_         ;
   flat_buffer         recv_buffer_    ;
 };
