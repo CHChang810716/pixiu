@@ -7,6 +7,7 @@
 #include <boost/asio/bind_executor.hpp>
 #include <httpservpp/logger.hpp>
 #include <httpservpp/request_handler.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 namespace httpservpp::session {
 
@@ -17,6 +18,7 @@ namespace __asio    = boost::asio         ;
 struct http_base 
 : public std::enable_shared_from_this<http_base>
 {
+  using tcp_socket = __asio::ip::tcp::socket;
   http_base(
     __asio::io_context&   ioc, 
     request_handler_ptr   req_handler
@@ -28,9 +30,9 @@ struct http_base
   , rep_queue_        (ioc.get_executor())
   , pending_req_num_  (0)
   , request_handler_  (req_handler)
-  {
-
-  }
+  , request_timeout_  (15)
+  , max_pending_req_num_(16)
+  {}
 protected:
   using request_body = __http::request<__http::string_body>;
   using strand       = __asio::strand<__asio::io_context::executor_type>;
@@ -49,10 +51,31 @@ private:
       rep_queue_, std::forward<Func>(func)
     );
   }
+  void request_timeout(int sec) {
+    request_timeout_ = sec;
+  }
+  void max_pending_request_num(int num) {
+    max_pending_req_num_ = num;
+  }
 protected:
-  void set_request_timeout_handler() {
-    // TODO: set handler
-    req_timer_.expires_after(config::get().request_timeout());
+  template<class Derived>
+  void set_request_timeout_handler(Derived& derived) {
+    auto on_timeout = [_self = shared_from_this()](auto ec) {
+      if(ec && ec != __asio::error::operation_aborted) {
+        logger().error("timer error");
+        return ;
+      }
+      if(req_timer_.expiry() > std::chrono::steady_clock::now() ) {
+        return ;
+      }
+      derived.do_request_timeout();
+    };
+    req_timer_.async_wait(
+      make_seq_req_handler(on_timeout)
+    );
+    req_timer_.expires_after(
+      std::chrono::seconds(request_timeout_)
+    );
   }
   
   template<class Http>
@@ -83,11 +106,11 @@ protected:
       );
       _self->async_recv_request(derived);
     };
-    if(_self->pending_req_num_ < config::get().max_pending_request_num()) {
+    if(_self->pending_req_num_ < max_pending_req_num_) {
       // prevent ddos attack
       return ;
     }
-    set_request_timeout_handler();
+    set_request_timeout_handler(derived);
     __http::async_read(
       derived.stream(), recv_buffer_, req_, 
       make_seq_req_handler(on_recv_request)
@@ -116,13 +139,15 @@ protected:
     );
   }
 protected:
-  boost::asio::steady_timer   req_timer_            ;
-  boost::beast::flat_buffer   recv_buffer_          ;
-  request_body                req_                  ; // workaroud for seperated message
-  strand                      req_queue_            ;
-  strand                      rep_queue_            ;
-  std::atomic_int             pending_req_num_  {0} ;
-  request_handler_ptr         request_handler_      ;
+  boost::asio::steady_timer   req_timer_             ;
+  boost::beast::flat_buffer   recv_buffer_           ;
+  request_body                req_                   ; // workaroud for seperated message
+  strand                      req_queue_             ;
+  strand                      rep_queue_             ;
+  std::atomic_int             pending_req_num_       ;
+  request_handler_ptr         request_handler_       ;
+  int                         request_timeout_       ;
+  int                         max_pending_req_num_   ;
 };
 
 }

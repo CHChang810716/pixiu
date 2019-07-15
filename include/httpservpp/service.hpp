@@ -9,8 +9,6 @@
 #include <boost/asio/ssl.hpp>
 #include <future_beast/detect_ssl.hpp>
 #include <httpservpp/session/interface.hpp>
-#include <httpservpp/session/https.hpp>
-#include <httpservpp/session/http.hpp>
 namespace httpservpp {
 
 struct service : public std::enable_shared_from_this<service>
@@ -31,6 +29,7 @@ public:
   , acceptor_   (ioc)
   , socket_     (ioc)
   {}
+
   void listen(const tcp_endp& ep) {
     error_code ec;
 
@@ -57,12 +56,16 @@ public:
         logger().error("accept failed");
         return ;
       }
-      _self->async_post_session(std::move(_self->socket_));
+      async_post_session(std::move(_self->socket_));
     };
     acceptor_.async_accept(socket_, on_accept);
   }
+  ~service() {
+    logger().debug("service destroy");
+  }
 private:
   static void async_post_session(tcp_socket socket) {
+    logger().debug("session run");
     // TODO:
   }
   PMEM_GET(io_context*,       ioc)
