@@ -16,15 +16,16 @@ namespace __beast   = boost::beast        ;
 namespace __asio    = boost::asio         ;
 
 struct http_base 
-: public std::enable_shared_from_this<http_base>
 {
-  using tcp_socket = __asio::ip::tcp::socket;
+private:
+  using tcp_socket        = __asio::ip::tcp::socket;
+  using flat_buffer       = boost::beast::flat_buffer;
+public:
   http_base(
     __asio::io_context&   ioc, 
     request_handler_ptr   req_handler
   ) 
   : req_timer_        (ioc)
-  , recv_buffer_      ()
   , req_              ()
   , req_queue_        (ioc.get_executor())
   , rep_queue_        (ioc.get_executor())
@@ -79,62 +80,58 @@ protected:
   }
   
   template<class Http>
-  void async_recv_request(Http& derived) {
+  void async_recv_request(Http derived) {
     using namespace _als;
-    auto on_recv_request = [
-      _self = shared_from_this(), 
-      &derived
-    ](error_code ec) {
+    auto on_recv_request = [derived](error_code ec) {
       // timer close socket
       if(ec == __asio::error::operation_aborted)
         return;
       if(ec == __http::error::end_of_stream)
-        return derived.do_eof();
+        return derived->do_eof();
       if(ec)
         return logger().error("receive request failed");
       // TODO: upgrade websocket here
 
-      _self->pending_req_num_ += 1;
+      this->pending_req_num_ += 1;
 
       request_handler_ptr->operator()(
-        std::move(_self->req_), 
-        [_self = shared_from_this(), &derived](auto response) {
-          _self->async_send_response(
-            derived, std::move(response)
-          );
+        std::move(derived->req_), 
+        [derived](auto response) {
+          derived->async_send_response(std::move(response));
         }
       );
-      _self->async_recv_request(derived);
+      this->async_recv_request(derived);
     };
-    if(_self->pending_req_num_ < max_pending_req_num_) {
+    if(this->pending_req_num_ < max_pending_req_num_) {
       // prevent ddos attack
       return ;
     }
     set_request_timeout_handler(derived);
     __http::async_read(
-      derived.stream(), recv_buffer_, req_, 
-      make_seq_req_handler(on_recv_request)
+      derived->stream(), 
+      derived->recv_buffer(), 
+      req_, make_seq_req_handler(on_recv_request)
     )
   }
   template<class Http, bool isRequest, class Body, class Fields>
   void async_send_response(
-    Http& derived, 
-    __http::message<isRequest, Body, Fields>&& msg
+    Http derived, 
+    __http::message<isRequest, Body, Fields> msg
   ) {
     auto on_send_response = 
-    [_self = shared_from_this()](error_code ec, bool close) {
+    [derived](error_code ec, bool close) {
       if(ec == __asio::error::operation_aborted)
         return;
       if(ec)
         return logger().error("send response failed");
       if(close) {
-        return derived.do_eof();
+        return derived->do_eof();
       }
 
-      _self->pending_req_num_ -= 1;
+      this->pending_req_num_ -= 1;
     };
     __http::async_write(
-      derived.stream(), msg,
+      derived->stream(), msg,
       make_seq_rep_handler(on_send_response)
     );
   }
