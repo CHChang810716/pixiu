@@ -7,5 +7,6 @@ target_link_libraries(${AKT_TARGET} PUBLIC
 if(MINGW)
   target_link_libraries(${AKT_TARGET} PUBLIC 
     ws2_32
+    wsock32
   )
 endif()

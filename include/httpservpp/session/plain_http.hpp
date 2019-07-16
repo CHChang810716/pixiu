@@ -31,6 +31,10 @@ public:
     this->async_recv_request();
   }
 
+  virtual ~plain_http() override {
+    logger().debug("plain_http destroy");
+  }
+
 private:
   template<bool isRequest, class Body, class Fields>
   void async_send_response(

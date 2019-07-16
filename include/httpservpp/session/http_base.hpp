@@ -81,7 +81,9 @@ protected:
   
   template<class Http>
   void async_recv_request(Http derived) {
+    logger().debug("start wait request");
     auto on_recv_request = [derived, this](error_code ec, std::size_t bytes_transf) -> void {
+      logger().debug("request received");
       // timer close socket
       if(ec == __asio::error::operation_aborted)
         return;
@@ -91,17 +93,19 @@ protected:
         return logger().error("receive request failed");
       // TODO: upgrade websocket here
 
+      logger().debug("request start process");
       this->pending_req_num_ += 1;
 
       request_handler_->operator()(
         std::move(derived->req_), 
         [derived](auto response) {
+          logger().debug("send response");
           derived->async_send_response(std::move(response));
         }
       );
       this->async_recv_request(derived);
     };
-    if(this->pending_req_num_ < max_pending_req_num_) {
+    if(this->pending_req_num_ > max_pending_req_num_) {
       // prevent ddos attack
       return ;
     }

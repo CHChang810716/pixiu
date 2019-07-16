@@ -6,18 +6,36 @@ class service_test
 {
 protected:
   static void SetUpTestCase() {
-    httpservpp::logger::config();
+    nlohmann::json data;
+    auto& loggers = data["loggers"];
+    loggers["http_plain"] = {
+      {"level", "debug"}
+    };
+    loggers["http_base"] = {
+      {"level", "debug"}
+    };
+    loggers["service"] = {
+      {"level", "debug"}
+    };
+    httpservpp::logger::config(data);
   }
 };
 
-TEST_F(service_test, basic_test) {
+// TEST_F(service_test, basic_test) {
+//   boost::asio::io_context ioc;
+//   httpservpp::service service(ioc);
+//   ioc.run_for(std::chrono::seconds(2));
+// }
+// TEST_F(service_test, bind_ip_test) {
+//   boost::asio::io_context ioc;
+//   httpservpp::service service(ioc);
+//   service.listen("127.0.0.1", 8080);
+//   ioc.run_for(std::chrono::seconds(2));
+// }
+TEST_F(service_test, async_accept_test) {
   boost::asio::io_context ioc;
-  httpservpp::service service(ioc);
-  ioc.run_for(std::chrono::seconds(2));
-}
-TEST_F(service_test, bind_ip_test) {
-  boost::asio::io_context ioc;
-  httpservpp::service service(ioc);
-  service.listen("127.0.0.1", 8080);
-  ioc.run_for(std::chrono::seconds(2));
+  auto service = httpservpp::make_service(ioc);
+  service->listen("127.0.0.1", 8080);
+  service->async_accept();
+  ioc.run();
 }

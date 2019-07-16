@@ -25,10 +25,14 @@ private:
   using flat_buffer       = boost::beast::flat_buffer;
   static auto& logger() { return logger::get("service"); }
 public:
-  service(io_context& ioc)
-  : ioc_        (&ioc)
-  , acceptor_   (ioc)
-  , socket_     (ioc)
+  service(
+    io_context&           ioc
+  )
+  : ioc_          (&ioc)
+  , acceptor_     (ioc)
+  , socket_       (ioc)
+  , recv_buffer_  ()
+  , req_handler_  (new request_handler())
   {}
 
   void listen(const tcp_endp& ep) {
@@ -58,10 +62,14 @@ public:
         return ;
       }
       _self->async_post_session();
+      _self->async_accept();
     };
     acceptor_.async_accept(socket_, on_accept);
   }
   ~service() {
+    if(acceptor_.is_open()) {
+      acceptor_.close();
+    }
     logger().debug("service destroy");
   }
 private:
@@ -82,5 +90,11 @@ private:
   VMEM_GET(request_handler_ptr, req_handler   )
 
 };
+using service_ptr = std::shared_ptr<service>;
+
+template<class... Args>
+auto make_service(Args&&... args) {
+  return std::make_shared<service>(std::forward<Args>(args)...);
+}
 
 }
