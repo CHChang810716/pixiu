@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <httpservpp/path.hpp>
 TEST(logger_test, usage) {
-  auto conf_path = httpservpp::path.test_data() 
+  auto conf_path = httpservpp::path .test_data() 
     / "logger_test.json";
   std::cout << conf_path << std::endl;
   httpservpp::logger::config(conf_path);

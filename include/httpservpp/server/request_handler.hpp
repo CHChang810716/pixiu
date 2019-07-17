@@ -3,7 +3,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/beast/http/string_body.hpp>
-namespace httpservpp {
+namespace httpservpp::server {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
@@ -11,7 +11,9 @@ namespace __asio    = boost::asio         ;
 
 struct request_handler {
   using request_body = __http::request<__http::string_body>;
-
+  static auto& logger() {
+    return httpservpp::logger::get("request_handler");
+  }
   template<class Func>
   void operator()(
     request_body  req, 
@@ -94,15 +96,18 @@ struct request_handler {
     // Respond to HEAD request
     if(req.method() == __http::verb::head)
     {
-        __http::response<__http::empty_body> res{__http::status::ok, req.version()};
-        res.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(__http::field::content_type, "text/plain");
-        res.content_length(body.size());
-        res.keep_alive(req.keep_alive());
-        return send(std::move(res));
+      logger().debug("head request");
+      __http::response<__http::empty_body> res{__http::status::ok, req.version()};
+      res.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
+      res.set(__http::field::content_type, "text/plain");
+      res.content_length(body.size());
+      res.keep_alive(req.keep_alive());
+      return send(std::move(res));
     }
 
     // Respond to GET request
+    auto body_size = body.size();
+    logger().debug("get request");
     __http::response<__http::string_body> res{
       std::piecewise_construct,
       std::make_tuple(std::move(body)),
@@ -110,7 +115,7 @@ struct request_handler {
     };
     res.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(__http::field::content_type, "text/plain");
-    res.content_length(body.size());
+    res.content_length(body_size);
     res.keep_alive(req.keep_alive());
     return send(std::move(res));
   }

@@ -8,9 +8,9 @@
 #include <httpservpp/logger.hpp>
 #include <boost/asio/ssl.hpp>
 #include <future_beast/detect_ssl.hpp>
-#include <httpservpp/session/interface.hpp>
-#include <httpservpp/session/plain_http.hpp>
-namespace httpservpp {
+#include <httpservpp/server/session/interface.hpp>
+#include <httpservpp/server/session/plain_http.hpp>
+namespace httpservpp::server {
 
 struct service : public std::enable_shared_from_this<service>
 {

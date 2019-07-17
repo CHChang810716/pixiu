@@ -3,7 +3,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <httpservpp/macro.hpp>
 #include <functional>
-namespace httpservpp::session {
+namespace httpservpp::server::session {
 struct interface {
 public:
   virtual void async_handle_requests() = 0;
@@ -11,6 +11,6 @@ public:
 };
 using interface_ptr = std::shared_ptr<interface>;
 }
-namespace httpservpp {
+namespace httpservpp::server {
   using session_ptr = session::interface_ptr;
 }
