@@ -11,6 +11,7 @@ namespace __asio    = boost::asio         ;
 
 struct request_handler {
   using request_body = __http::request<__http::string_body>;
+  // using sender = std::function<void()
   static auto& logger() {
     return pixiu::logger::get("request_handler");
   }
@@ -119,8 +120,7 @@ struct request_handler {
     res.keep_alive(req.keep_alive());
     return send(std::move(res));
   }
-};
 
-using request_handler_ptr = std::shared_ptr<request_handler>;
+};
 
 }

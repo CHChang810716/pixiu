@@ -10,9 +10,13 @@
 #include <future_beast/detect_ssl.hpp>
 #include <pixiu/server/session/interface.hpp>
 #include <pixiu/server/session/plain_http.hpp>
+#include <pixiu/server/request_handler.hpp>
 namespace pixiu::server {
 
-struct core : public std::enable_shared_from_this<core>
+template<class RequestHandler>
+struct core : public std::enable_shared_from_this<
+  core<RequestHandler>
+>
 {
 private:
   using error_code        = boost::system::error_code;
@@ -23,16 +27,18 @@ private:
   using tcp_acceptor      = tcp::acceptor;
   using tcp_socket        = tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
+  using request_handler_t = RequestHandler;
   static auto& logger() { return logger::get("core"); }
 public:
   core(
-    io_context&           ioc
+    io_context&           ioc,
+    request_handler_t&&   request_handler
   )
-  : ioc_          (&ioc)
-  , acceptor_     (ioc)
-  , socket_       (ioc)
-  , recv_buffer_  ()
-  , req_handler_  (new request_handler())
+  : ioc_              (&ioc)
+  , acceptor_         (ioc)
+  , socket_           (ioc)
+  , recv_buffer_      ()
+  , request_handler_  (std::move(request_handler))
   {}
 
   void listen(const tcp_endp& ep) {
@@ -56,7 +62,7 @@ public:
   }
 
   void async_accept() {
-    auto on_accept = [_self = shared_from_this()](error_code ec) {
+    auto on_accept = [_self = this->shared_from_this()](error_code ec) {
       if(ec) {
         logger().error("accept failed");
         return ;
@@ -75,10 +81,12 @@ public:
 private:
   void async_post_session() {
     logger().debug("session run");
-    session_ptr p_session = std::make_shared<session::plain_http>(
+    session_ptr p_session = std::make_shared<
+      session::plain_http<request_handler_t>
+    >(
       *ioc_, 
       std::move(socket_),
-      req_handler_,
+      request_handler_,
       std::move(recv_buffer_)
     );
     p_session->async_handle_requests();
@@ -87,14 +95,20 @@ private:
   VMEM_GET(tcp_acceptor,        acceptor      )
   VMEM_GET(tcp_socket,          socket        )
   VMEM_GET(flat_buffer,         recv_buffer   )
-  VMEM_GET(request_handler_ptr, req_handler   )
+
+  const request_handler_t       request_handler_  ;
 
 };
-using core_ptr = std::shared_ptr<core>;
-
-template<class... Args>
-auto make_core(Args&&... args) {
-  return std::make_shared<core>(std::forward<Args>(args)...);
+// using core_ptr = std::shared_ptr<core>;
+// 
+template<class RequestHandler = pixiu::server::request_handler >
+auto make_core(
+  boost::asio::io_context& ioc,
+  RequestHandler&& request_handler = RequestHandler()
+) {
+  return std::make_shared<
+    core<RequestHandler>
+  >(ioc, std::move(request_handler));
 }
 
 }

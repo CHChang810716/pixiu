@@ -15,24 +15,26 @@ namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
 namespace __asio    = boost::asio         ;
 
+template<class RequestHandler>
 struct http_base 
 {
 private:
   using tcp_socket        = __asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
+  using request_handler_t = RequestHandler;
   static auto& logger() { return logger::get("http_base"); }
 public:
   http_base(
-    __asio::io_context&   ioc, 
-    request_handler_ptr   req_handler
+    __asio::io_context&       ioc, 
+    const request_handler_t&  request_handler
   ) 
-  : req_timer_        (ioc)
-  , req_              ()
-  , req_queue_        (ioc.get_executor())
-  , rep_queue_        (ioc.get_executor())
-  , pending_req_num_  (0)
-  , request_handler_  (req_handler)
-  , request_timeout_  (15)
+  : req_timer_          (ioc)
+  , req_                ()
+  , req_queue_          (ioc.get_executor())
+  , rep_queue_          (ioc.get_executor())
+  , pending_req_num_    (0)
+  , request_handler_    (&request_handler)
+  , request_timeout_    (15)
   , max_pending_req_num_(16)
   {}
   ~http_base() {
@@ -168,7 +170,7 @@ protected:
   strand                      req_queue_             ;
   strand                      rep_queue_             ;
   std::atomic_int             pending_req_num_       ;
-  request_handler_ptr         request_handler_       ;
+  const request_handler_t*    request_handler_       ;
   int                         request_timeout_       ;
   int                         max_pending_req_num_   ;
 };
