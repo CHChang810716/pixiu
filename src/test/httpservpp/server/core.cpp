@@ -1,7 +1,7 @@
-#include <httpservpp/server/service.hpp>
+#include <httpservpp/server/core.hpp>
 #include <gtest/gtest.h>
 
-class service_test 
+class core_test 
 : public ::testing::Test 
 {
 protected:
@@ -14,7 +14,7 @@ protected:
     loggers["http_base"] = {
       {"level", "debug"}
     };
-    loggers["service"] = {
+    loggers["core"] = {
       {"level", "debug"}
     };
     loggers["request_handler"] = {
@@ -24,21 +24,21 @@ protected:
   }
 };
 
-// TEST_F(service_test, basic_test) {
+// TEST_F(core_test, basic_test) {
 //   boost::asio::io_context ioc;
-//   httpservpp::server::service service(ioc);
+//   httpservpp::server::core core(ioc);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
-// TEST_F(service_test, bind_ip_test) {
+// TEST_F(core_test, bind_ip_test) {
 //   boost::asio::io_context ioc;
-//   httpservpp::server::service service(ioc);
-//   service.listen("127.0.0.1", 8080);
+//   httpservpp::server::core core(ioc);
+//   core.listen("127.0.0.1", 8080);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
-TEST_F(service_test, async_accept_test) {
+TEST_F(core_test, async_accept_test) {
   boost::asio::io_context ioc;
-  auto service = httpservpp::server::make_service(ioc);
-  service->listen("127.0.0.1", 8080);
-  service->async_accept();
+  auto core = httpservpp::server::make_core(ioc);
+  core->listen("127.0.0.1", 8080);
+  core->async_accept();
   ioc.run();
 }

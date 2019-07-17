@@ -12,7 +12,7 @@
 #include <httpservpp/server/session/plain_http.hpp>
 namespace httpservpp::server {
 
-struct service : public std::enable_shared_from_this<service>
+struct core : public std::enable_shared_from_this<core>
 {
 private:
   using error_code        = boost::system::error_code;
@@ -23,9 +23,9 @@ private:
   using tcp_acceptor      = tcp::acceptor;
   using tcp_socket        = tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  static auto& logger() { return logger::get("service"); }
+  static auto& logger() { return logger::get("core"); }
 public:
-  service(
+  core(
     io_context&           ioc
   )
   : ioc_          (&ioc)
@@ -66,11 +66,11 @@ public:
     };
     acceptor_.async_accept(socket_, on_accept);
   }
-  ~service() {
+  ~core() {
     if(acceptor_.is_open()) {
       acceptor_.close();
     }
-    logger().debug("service destroy");
+    logger().debug("core destroy");
   }
 private:
   void async_post_session() {
@@ -90,11 +90,11 @@ private:
   VMEM_GET(request_handler_ptr, req_handler   )
 
 };
-using service_ptr = std::shared_ptr<service>;
+using core_ptr = std::shared_ptr<core>;
 
 template<class... Args>
-auto make_service(Args&&... args) {
-  return std::make_shared<service>(std::forward<Args>(args)...);
+auto make_core(Args&&... args) {
+  return std::make_shared<core>(std::forward<Args>(args)...);
 }
 
 }
