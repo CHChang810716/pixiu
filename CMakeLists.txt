@@ -13,7 +13,7 @@ HunterGate(
     FILEPATH ${CMAKE_CURRENT_LIST_DIR}/cmake/hunter_config.cmake
 )
 
-project(httpservpp
+project(pixiu
     LANGUAGES C CXX 
     VERSION 0.0.0.1
 )

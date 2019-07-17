@@ -1,7 +1,7 @@
 #pragma once
 #include "macro.hpp"
 #include <chrono>
-namespace httpservpp {
+namespace pixiu {
 
 struct config {
   static config& get() {

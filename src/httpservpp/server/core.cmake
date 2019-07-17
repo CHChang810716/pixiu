@@ -1,6 +1,6 @@
 include(cmake/scheme/lib.cmake)
 target_link_libraries(${AKT_TARGET} PUBLIC 
-  httpservpp-server-logger
+  pixiu-server-logger
   OpenSSL::SSL
   OpenSSL::Crypto
 )

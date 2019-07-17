@@ -3,7 +3,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/beast/http/string_body.hpp>
-namespace httpservpp::server {
+namespace pixiu::server {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
@@ -12,7 +12,7 @@ namespace __asio    = boost::asio         ;
 struct request_handler {
   using request_body = __http::request<__http::string_body>;
   static auto& logger() {
-    return httpservpp::logger::get("request_handler");
+    return pixiu::logger::get("request_handler");
   }
   template<class Func>
   void operator()(

@@ -2,7 +2,7 @@
 #include "http_base.hpp"
 #include <boost/asio/ip/tcp.hpp>
 #include "interface.hpp"
-namespace httpservpp::server::session {
+namespace pixiu::server::session {
 namespace __ip = boost::asio::ip;
 struct plain_http 
 : public http_base 

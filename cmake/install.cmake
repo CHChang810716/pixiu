@@ -62,6 +62,6 @@ endif()
 if(BUILD_TEST)
     install(
         DIRECTORY test_data/
-        DESTINATION test_data/httpservpp
+        DESTINATION test_data/pixiu
     )
 endif()

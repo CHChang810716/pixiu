@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/system/error_code.hpp>
 #include <string>
-namespace httpservpp {
+namespace pixiu {
 
 constexpr struct error_code_throw_t {
   void operator()(const boost::system::error_code& ec, const std::string& msg) const {

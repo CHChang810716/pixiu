@@ -1,2 +1,2 @@
 include(cmake/scheme/test.cmake)
-target_link_libraries(${AKT_TARGET} PRIVATE httpservpp-server-logger)
+target_link_libraries(${AKT_TARGET} PRIVATE pixiu-server-logger)

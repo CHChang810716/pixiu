@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/filesystem.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
-namespace httpservpp {
+namespace pixiu {
 
 constexpr struct path {
   using fspath = boost::filesystem::path;
@@ -16,8 +16,8 @@ constexpr struct path {
     ).make_preferred();
   }
  fspath test_data() const {
-   return install() / "test_data" / "httpservpp";
+   return install() / "test_data" / "pixiu";
  } 
 } path;
 
-} // namespace httpservpp
+} // namespace pixiu

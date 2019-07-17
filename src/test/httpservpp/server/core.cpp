@@ -1,4 +1,4 @@
-#include <httpservpp/server/core.hpp>
+#include <pixiu/server/core.hpp>
 #include <gtest/gtest.h>
 
 class core_test 
@@ -20,24 +20,24 @@ protected:
     loggers["request_handler"] = {
       {"level", "debug"}
     };
-    httpservpp::logger::config(data);
+    pixiu::logger::config(data);
   }
 };
 
 // TEST_F(core_test, basic_test) {
 //   boost::asio::io_context ioc;
-//   httpservpp::server::core core(ioc);
+//   pixiu::server::core core(ioc);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 // TEST_F(core_test, bind_ip_test) {
 //   boost::asio::io_context ioc;
-//   httpservpp::server::core core(ioc);
+//   pixiu::server::core core(ioc);
 //   core.listen("127.0.0.1", 8080);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 TEST_F(core_test, async_accept_test) {
   boost::asio::io_context ioc;
-  auto core = httpservpp::server::make_core(ioc);
+  auto core = pixiu::server::make_core(ioc);
   core->listen("127.0.0.1", 8080);
   core->async_accept();
   ioc.run();

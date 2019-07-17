@@ -1,9 +1,9 @@
 #pragma once
 #include <memory>
 #include <boost/lockfree/spsc_queue.hpp>
-#include <httpservpp/macro.hpp>
+#include <pixiu/macro.hpp>
 #include <functional>
-namespace httpservpp::server::session {
+namespace pixiu::server::session {
 struct interface {
 public:
   virtual void async_handle_requests() = 0;
@@ -11,6 +11,6 @@ public:
 };
 using interface_ptr = std::shared_ptr<interface>;
 }
-namespace httpservpp::server {
+namespace pixiu::server {
   using session_ptr = session::interface_ptr;
 }
