@@ -10,12 +10,12 @@
 #include <future_beast/detect_ssl.hpp>
 #include <pixiu/server/session/interface.hpp>
 #include <pixiu/server/session/plain_http.hpp>
-#include <pixiu/server/request_handler.hpp>
+#include <pixiu/server/request_router.hpp>
 namespace pixiu::server {
 
-template<class RequestHandler>
+template<class RequestRouter>
 struct core : public std::enable_shared_from_this<
-  core<RequestHandler>
+  core<RequestRouter>
 >
 {
 private:
@@ -27,18 +27,18 @@ private:
   using tcp_acceptor      = tcp::acceptor;
   using tcp_socket        = tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_handler_t = RequestHandler;
+  using request_router_t = RequestRouter;
   static auto& logger() { return logger::get("core"); }
 public:
   core(
     io_context&           ioc,
-    request_handler_t&&   request_handler
+    request_router_t&&   request_router
   )
   : ioc_              (&ioc)
   , acceptor_         (ioc)
   , socket_           (ioc)
   , recv_buffer_      ()
-  , request_handler_  (std::move(request_handler))
+  , request_router_  (std::move(request_router))
   {}
 
   void listen(const tcp_endp& ep) {
@@ -82,11 +82,11 @@ private:
   void async_post_session() {
     logger().debug("session run");
     session_ptr p_session = std::make_shared<
-      session::plain_http<request_handler_t>
+      session::plain_http<request_router_t>
     >(
       *ioc_, 
       std::move(socket_),
-      request_handler_,
+      request_router_,
       std::move(recv_buffer_)
     );
     p_session->async_handle_requests();
@@ -96,19 +96,19 @@ private:
   VMEM_GET(tcp_socket,          socket        )
   VMEM_GET(flat_buffer,         recv_buffer   )
 
-  const request_handler_t       request_handler_  ;
+  const request_router_t       request_router_  ;
 
 };
 // using core_ptr = std::shared_ptr<core>;
 // 
-template<class RequestHandler = pixiu::server::request_handler >
+template<class RequestRouter = pixiu::server::request_router >
 auto make_core(
   boost::asio::io_context& ioc,
-  RequestHandler&& request_handler = RequestHandler()
+  RequestRouter&& request_router = RequestRouter()
 ) {
   return std::make_shared<
-    core<RequestHandler>
-  >(ioc, std::move(request_handler));
+    core<RequestRouter>
+  >(ioc, std::move(request_router));
 }
 
 }

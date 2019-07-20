@@ -4,30 +4,30 @@
 #include "interface.hpp"
 namespace pixiu::server::session {
 namespace __ip = boost::asio::ip;
-template<class RequestHandler>
+template<class RequestRouter>
 struct plain_http 
-: public http_base<RequestHandler> 
+: public http_base<RequestRouter> 
 , public std::enable_shared_from_this<
-    plain_http<RequestHandler>
+    plain_http<RequestRouter>
   > 
 , public interface
 {
-friend http_base<RequestHandler>;
+friend http_base<RequestRouter>;
 private:
   using tcp_socket        = boost::asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_handler_t = RequestHandler;
-  using base_http_t       = http_base<request_handler_t>;
+  using request_router_t = RequestRouter;
+  using base_http_t       = http_base<request_router_t>;
   static auto& logger() { return logger::get("plain_http"); }
 
 public:
   plain_http(
     __asio::io_context&       ioc,
     tcp_socket                socket,
-    const request_handler_t&  request_handler,
+    const request_router_t&  request_router,
     flat_buffer               recv_buffer = flat_buffer()
   )
-  : base_http_t         (ioc, request_handler)
+  : base_http_t         (ioc, request_router)
   , socket_             (std::move(socket))
   , recv_buffer_        (std::move(recv_buffer))
   {}

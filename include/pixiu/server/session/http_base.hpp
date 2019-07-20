@@ -6,7 +6,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <pixiu/logger.hpp>
-#include <pixiu/server/request_handler.hpp>
+#include <pixiu/server/request_router.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 namespace pixiu::server::session {
@@ -15,25 +15,25 @@ namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
 namespace __asio    = boost::asio         ;
 
-template<class RequestHandler>
+template<class RequestRouter>
 struct http_base 
 {
 private:
   using tcp_socket        = __asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_handler_t = RequestHandler;
+  using request_router_t = RequestRouter;
   static auto& logger() { return logger::get("http_base"); }
 public:
   http_base(
     __asio::io_context&       ioc, 
-    const request_handler_t&  request_handler
+    const request_router_t&  request_router
   ) 
   : req_timer_          (ioc)
   , req_                ()
   , req_queue_          (ioc.get_executor())
   , rep_queue_          (ioc.get_executor())
   , pending_req_num_    (0)
-  , request_handler_    (&request_handler)
+  , request_router_    (&request_router)
   , request_timeout_    (15)
   , max_pending_req_num_(16)
   {}
@@ -106,7 +106,7 @@ protected:
       logger().debug("request start process");
       this->pending_req_num_ += 1;
 
-      request_handler_->operator()(
+      request_router_->operator()(
         std::move(derived->req_), 
         [derived](auto response) {
           logger().debug("response created");
@@ -170,7 +170,7 @@ protected:
   strand                      req_queue_             ;
   strand                      rep_queue_             ;
   std::atomic_int             pending_req_num_       ;
-  const request_handler_t*    request_handler_       ;
+  const request_router_t*    request_router_       ;
   int                         request_timeout_       ;
   int                         max_pending_req_num_   ;
 };
