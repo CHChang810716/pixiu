@@ -27,18 +27,18 @@ private:
   using tcp_acceptor      = tcp::acceptor;
   using tcp_socket        = tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_router_t = RequestRouter;
+  using request_router_t  = RequestRouter;
   static auto& logger() { return logger::get("core"); }
 public:
   core(
     io_context&           ioc,
-    request_router_t&&   request_router
+    request_router_t&&    request_router
   )
   : ioc_              (&ioc)
   , acceptor_         (ioc)
   , socket_           (ioc)
   , recv_buffer_      ()
-  , request_router_  (std::move(request_router))
+  , request_router_   (std::move(request_router))
   {}
 
   void listen(const tcp_endp& ep) {

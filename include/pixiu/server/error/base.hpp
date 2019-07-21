@@ -29,6 +29,7 @@ protected:
     res.keep_alive(req.keep_alive());
     res.body() = this->what();
     res.prepare_payload();
+    return response(res);
   }
 
 };

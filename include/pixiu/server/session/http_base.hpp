@@ -21,7 +21,7 @@ struct http_base
 private:
   using tcp_socket        = __asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_router_t = RequestRouter;
+  using request_router_t  = RequestRouter;
   static auto& logger() { return logger::get("http_base"); }
 public:
   http_base(
@@ -33,7 +33,7 @@ public:
   , req_queue_          (ioc.get_executor())
   , rep_queue_          (ioc.get_executor())
   , pending_req_num_    (0)
-  , request_router_    (&request_router)
+  , request_router_     (&request_router)
   , request_timeout_    (15)
   , max_pending_req_num_(16)
   {}
@@ -127,13 +127,16 @@ protected:
       make_seq_req_handler(on_recv_request)
     );
   }
-  template<class Http, bool isRequest, class Body, class Fields>
+  template<class Http, class Body, class Fields>
   void async_send_response(
     Http derived, 
-    __http::message<isRequest, Body, Fields> msg
+    __http::response<Body, Fields> msg
   ) {
+    auto msg_ptr = std::make_shared<
+      __http::response<Body, Fields>
+    >(std::move(msg));
     auto on_send_response = 
-    [derived, this](error_code ec, bool close) {
+    [derived, this, msg_ptr](error_code ec, bool close) {
       if(ec == __asio::error::operation_aborted) {
         logger().debug("response: operation aborted");
         return;
@@ -147,21 +150,11 @@ protected:
 
       this->pending_req_num_ -= 1;
     };
-    boost::asio::post(rep_queue_, [
-      msg = std::move(msg), 
-      derived, this, 
-      on_send_response
-    ](){
-      boost::system::error_code ec;
-      bool close = msg.need_eof();
-      __http::serializer<isRequest, Body, Fields> sr(std::move(msg));
-      logger().debug("response sending");
-      __http::write(derived->stream(), sr, ec);
-      logger().debug("response sended");
-      boost::asio::post(
-        req_queue_, std::bind(on_send_response, ec, close)
-      );
-    });
+    __http::async_write(
+      derived->stream(),
+      *msg_ptr,
+      make_seq_rep_handler(on_send_response)
+    );
   }
 protected:
   boost::asio::steady_timer   req_timer_             ;
@@ -170,7 +163,7 @@ protected:
   strand                      req_queue_             ;
   strand                      rep_queue_             ;
   std::atomic_int             pending_req_num_       ;
-  const request_router_t*    request_router_       ;
+  const request_router_t*     request_router_        ;
   int                         request_timeout_       ;
   int                         max_pending_req_num_   ;
 };
