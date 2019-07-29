@@ -21,18 +21,26 @@ public:
     core(boost::asio::io_context& ioc)
     : ioc_(&ioc)
     {}
-
-    void async_read(
+    template<class CompletionToken>
+    auto async_read(
         const std::string& host,
         const std::string& port,
         int version,
-        std::vector<request_param> req_vec
+        std::vector<request_param> req_vec,
+        CompletionToken&& token
     ) {
         namespace http = boost::beast::http;
+        using response = http::response<http::dynamic_body>;
+        using responses = std::vector<response>;
+        boost::asio::handler_type<CompletionToken, void(responses)> handler(
+            std::forward<CompletionToken>(token)
+        );
+        boost::asio::async_result<decltype(handler)> result(handler);
         boost::asio::spawn([
             req_vec = std::move(req_vec),
             p_ioc = ioc_,
-            host, port, version
+            host, port, version,
+            handler
         ](boost::asio::yield_context yield){
             auto& ioc = *p_ioc;
             boost::system::error_code ec;
@@ -55,9 +63,19 @@ public:
                 if(ec) return logger().error("request failed");
             }
 
-            boost::beast::flat_buffer b;
-            http::response<http::dynamic_body> rep;
+            boost::beast::flat_buffer recv_buf;
+            responses reps(req_param.size());
+            for(auto&& rep : reps) {
+                http::async_read(socket, recv_buf, rep, yield[ec]);
+            }
+            socket.shutdown(tcp::socket::shutdown_both, ec);
+
+            if(ec && ec != boost::system::errc::not_connected) {
+                return logger().error("connection shutdown not gracefully");
+            }
+            handler(std::move(reps));
         });
+        return result.get();
     }
 
 protected:

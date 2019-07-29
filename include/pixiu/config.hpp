@@ -17,10 +17,10 @@ private:
     inst.max_pending_request_num_ = 16;
     return inst;
   }
-  VMEM_GET(std::chrono::seconds, request_timeout        )
-  VMEM_GET(bool,                 use_ssl                )
-  VMEM_GET(unsigned short,       port                   )
-  VMEM_GET(int,                  max_pending_request_num)
+  PIXIU_VMEM_GET(std::chrono::seconds, request_timeout        )
+  PIXIU_VMEM_GET(bool,                 use_ssl                )
+  PIXIU_VMEM_GET(unsigned short,       port                   )
+  PIXIU_VMEM_GET(int,                  max_pending_request_num)
 };
 
 }

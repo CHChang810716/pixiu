@@ -91,10 +91,10 @@ private:
     );
     p_session->async_handle_requests();
   }
-  PMEM_GET(io_context*,         ioc           )
-  VMEM_GET(tcp_acceptor,        acceptor      )
-  VMEM_GET(tcp_socket,          socket        )
-  VMEM_GET(flat_buffer,         recv_buffer   )
+  PIXIU_PMEM_GET(io_context*,         ioc           )
+  PIXIU_VMEM_GET(tcp_acceptor,        acceptor      )
+  PIXIU_VMEM_GET(tcp_socket,          socket        )
+  PIXIU_VMEM_GET(flat_buffer,         recv_buffer   )
 
   const request_router_t       request_router_  ;
 
