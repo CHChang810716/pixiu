@@ -19,10 +19,16 @@ find_package(fmt CONFIG REQUIRED)
 hunter_add_package(nlohmann_json)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-hunter_add_package(Boost COMPONENTS filesystem)
+hunter_add_package(Boost COMPONENTS 
+    filesystem
+    coroutine
+    context
+)
 find_package(Boost 
     COMPONENTS 
         filesystem
+        coroutine
+        context
     CONFIG
     REQUIRED
 )

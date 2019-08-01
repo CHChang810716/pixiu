@@ -8,8 +8,13 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <pixiu/logger.hpp>
 #include <boost/asio/connect.hpp>
+#include <utility>
 
 namespace pixiu::client {
+
+namespace __http = boost::beast::http;
+using response = __http::response<__http::dynamic_body>;
+using responses = std::vector<response>;
 
 struct core {
 protected:
@@ -30,8 +35,6 @@ public:
         CompletionToken&& token
     ) {
         namespace http = boost::beast::http;
-        using response = http::response<http::dynamic_body>;
-        using responses = std::vector<response>;
         boost::asio::handler_type<CompletionToken, void(responses)> handler(
             std::forward<CompletionToken>(token)
         );
@@ -64,7 +67,7 @@ public:
             }
 
             boost::beast::flat_buffer recv_buf;
-            responses reps(req_param.size());
+            responses reps(req_vec.size());
             for(auto&& rep : reps) {
                 http::async_read(socket, recv_buf, rep, yield[ec]);
             }
@@ -81,5 +84,11 @@ public:
 protected:
     boost::asio::io_context* ioc_;
 };
+
+auto make_core(
+  boost::asio::io_context& ioc
+) {
+  return std::make_shared<core>(ioc);
+}
 
 }

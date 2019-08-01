@@ -11,12 +11,13 @@
 #include <pixiu/server/session/interface.hpp>
 #include <pixiu/server/session/plain_http.hpp>
 #include <pixiu/server/request_router.hpp>
+#include <boost/coroutine2/all.hpp>
+#include <boost/asio/spawn.hpp>
 namespace pixiu::server {
 
 template<class RequestRouter>
-struct core : public std::enable_shared_from_this<
-  core<RequestRouter>
->
+struct core
+: public std::enable_shared_from_this<core<RequestRouter>>
 {
 private:
   using error_code        = boost::system::error_code;
@@ -36,8 +37,6 @@ public:
   )
   : ioc_              (&ioc)
   , acceptor_         (ioc)
-  , socket_           (ioc)
-  , recv_buffer_      ()
   , request_router_   (std::move(request_router))
   {}
 
@@ -54,23 +53,35 @@ public:
       socket_base::max_listen_connections, ec
     );
     error_code_throw(ec, "acceptor listen failed");
+    boost::asio::spawn([
+      _self = this->shared_from_this()
+    ](boost::asio::yield_context yield){
+      tcp_socket                socket      (*(_self->ioc_));
+      flat_buffer               recv_buffer ;
+      boost::system::error_code ec          ;
+      while(true) {
+        _self->acceptor_.async_accept(socket, yield[ec]);
+        if(ec) {
+          logger().error("accept failed");
+          return ;
+        }
+        logger().debug("session run");
+        session_ptr p_session = std::make_shared<
+          session::plain_http<request_router_t>
+        >(
+          *(_self->ioc_), 
+          std::move(socket),
+          _self->request_router_,
+          std::move(recv_buffer)
+        );
+        p_session->async_handle_requests();
+      }
+    });
   }
   void listen( const std::string& ip, unsigned short port) {
     listen(tcp_endp{ 
       boost::asio::ip::make_address(ip), port
     });
-  }
-
-  void async_accept() {
-    auto on_accept = [_self = this->shared_from_this()](error_code ec) {
-      if(ec) {
-        logger().error("accept failed");
-        return ;
-      }
-      _self->async_post_session();
-      _self->async_accept();
-    };
-    acceptor_.async_accept(socket_, on_accept);
   }
   ~core() {
     if(acceptor_.is_open()) {
@@ -79,25 +90,9 @@ public:
     logger().debug("core destroy");
   }
 private:
-  void async_post_session() {
-    logger().debug("session run");
-    session_ptr p_session = std::make_shared<
-      session::plain_http<request_router_t>
-    >(
-      *ioc_, 
-      std::move(socket_),
-      request_router_,
-      std::move(recv_buffer_)
-    );
-    p_session->async_handle_requests();
-  }
-  PIXIU_PMEM_GET(io_context*,         ioc           )
-  PIXIU_VMEM_GET(tcp_acceptor,        acceptor      )
-  PIXIU_VMEM_GET(tcp_socket,          socket        )
-  PIXIU_VMEM_GET(flat_buffer,         recv_buffer   )
-
+  io_context*                  ioc_             ;
+  tcp_acceptor                 acceptor_        ;
   const request_router_t       request_router_  ;
-
 };
 // using core_ptr = std::shared_ptr<core>;
 // 
