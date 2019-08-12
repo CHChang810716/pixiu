@@ -6,8 +6,8 @@
 #include <stdexcept>
 #include <pixiu/error_code_throw.hpp>
 #include <pixiu/logger.hpp>
-#include <boost/asio/ssl.hpp>
-#include <future_beast/detect_ssl.hpp>
+// #include <boost/asio/ssl.hpp>
+// #include <future_beast/detect_ssl.hpp>
 #include <pixiu/server/session/interface.hpp>
 #include <pixiu/server/session/plain_http.hpp>
 #include <pixiu/server/request_router.hpp>
@@ -56,10 +56,10 @@ public:
     boost::asio::spawn([
       _self = this->shared_from_this()
     ](boost::asio::yield_context yield){
-      tcp_socket                socket      (*(_self->ioc_));
-      flat_buffer               recv_buffer ;
       boost::system::error_code ec          ;
       while(true) {
+        flat_buffer               recv_buffer ;
+        tcp_socket                socket      (*(_self->ioc_));
         _self->acceptor_.async_accept(socket, yield[ec]);
         if(ec) {
           logger().error("accept failed");
@@ -69,7 +69,7 @@ public:
         session_ptr p_session = std::make_shared<
           session::plain_http<request_router_t>
         >(
-          *(_self->ioc_), 
+          _self->acceptor_.get_executor().context(),
           std::move(socket),
           _self->request_router_,
           std::move(recv_buffer)

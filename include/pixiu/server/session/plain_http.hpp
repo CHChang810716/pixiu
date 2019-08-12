@@ -1,30 +1,30 @@
 #pragma once
-#include "http_base.hpp"
+#include "http_base_coro.hpp"
 #include <boost/asio/ip/tcp.hpp>
 #include "interface.hpp"
 namespace pixiu::server::session {
 namespace __ip = boost::asio::ip;
 template<class RequestRouter>
 struct plain_http 
-: public http_base<RequestRouter> 
+: public http_base<plain_http<RequestRouter>, RequestRouter> 
 , public std::enable_shared_from_this<
     plain_http<RequestRouter>
   > 
 , public interface
 {
-friend http_base<RequestRouter>;
+friend http_base<plain_http<RequestRouter>, RequestRouter>;
 private:
   using tcp_socket        = boost::asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_router_t = RequestRouter;
-  using base_http_t       = http_base<request_router_t>;
+  using request_router_t  = RequestRouter;
+  using base_http_t       = http_base<plain_http<RequestRouter>, RequestRouter>;
   static auto& logger() { return logger::get("plain_http"); }
 
 public:
   plain_http(
     __asio::io_context&       ioc,
     tcp_socket                socket,
-    const request_router_t&  request_router,
+    const request_router_t&   request_router,
     flat_buffer               recv_buffer = flat_buffer()
   )
   : base_http_t         (ioc, request_router)
@@ -33,7 +33,7 @@ public:
   {}
 
   virtual void async_handle_requests() override {
-    this->async_recv_request();
+    base_http_t::async_recv_requests();
   }
 
   virtual ~plain_http() override {
@@ -46,17 +46,17 @@ private:
     __http::message<isRequest, Body, Fields> msg
   ) {
     return base_http_t::async_send_response(
-      this->shared_from_this(), std::move(msg)
+      std::move(msg)
     );
   }
   void async_recv_request() {
     return base_http_t::async_recv_request(this->shared_from_this());
   }
-  void do_eof() {
+  void on_eof() {
     boost::system::error_code ec;
     socket_.shutdown(__ip::tcp::socket::shutdown_send, ec);
   }
-  void do_request_timeout() {
+  void on_timeout() {
     boost::system::error_code ec;
     socket_.shutdown(__ip::tcp::socket::shutdown_both, ec);
     socket_.close(ec);
