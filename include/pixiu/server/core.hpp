@@ -40,27 +40,31 @@ public:
   , request_router_   (std::move(request_router))
   {}
 
-  void listen(const tcp_endp& ep) {
-    error_code ec;
-
-    acceptor_.open(ep.protocol(), ec);
-    error_code_throw(ec, "acceptor open failed");
-
-    acceptor_.bind(ep, ec);
-    error_code_throw(ec, "acceptor bind failed");
-
-    acceptor_.listen(
-      socket_base::max_listen_connections, ec
-    );
-    error_code_throw(ec, "acceptor listen failed");
-    boost::asio::spawn([
-      _self = this->shared_from_this()
+  using request      = __http::request<__http::string_body>;
+  void listen(tcp_endp ep) {
+    boost::asio::spawn(*ioc_, [
+      _self = this->shared_from_this(), this,
+      ep = std::move(ep)
     ](boost::asio::yield_context yield){
-      boost::system::error_code ec          ;
-      while(true) {
+      error_code ec;
+
+      acceptor_.open(ep.protocol(), ec);
+      error_code_throw(ec, "acceptor open failed");
+
+      acceptor_.set_option(boost::asio::socket_base::reuse_address(true), ec);
+      error_code_throw(ec, "acceptor set_option failed");
+
+      acceptor_.bind(ep, ec);
+      error_code_throw(ec, "acceptor bind failed");
+
+      acceptor_.listen(
+        socket_base::max_listen_connections, ec
+      );
+      error_code_throw(ec, "acceptor listen failed");
+      for(;;) {
         flat_buffer               recv_buffer ;
-        tcp_socket                socket      (*(_self->ioc_));
-        _self->acceptor_.async_accept(socket, yield[ec]);
+        tcp_socket                socket      (*ioc_);
+        acceptor_.async_accept(socket, yield[ec]);
         if(ec) {
           logger().error("accept failed");
           return ;
@@ -69,9 +73,9 @@ public:
         session_ptr p_session = std::make_shared<
           session::plain_http<request_router_t>
         >(
-          _self->acceptor_.get_executor().context(),
+          acceptor_.get_executor().context(),
           std::move(socket),
-          _self->request_router_,
+          request_router_,
           std::move(recv_buffer)
         );
         p_session->async_handle_requests();

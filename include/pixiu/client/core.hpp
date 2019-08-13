@@ -13,6 +13,7 @@
 namespace pixiu::client {
 
 namespace __http = boost::beast::http;
+namespace __asio = boost::asio;
 using response = __http::response<__http::dynamic_body>;
 using responses = std::vector<response>;
 
@@ -23,6 +24,7 @@ protected:
     }
 public:
     using tcp = boost::asio::ip::tcp;
+    using error_code   = boost::system::error_code;
     core(boost::asio::io_context& ioc)
     : ioc_(&ioc)
     {}
@@ -35,10 +37,11 @@ public:
         CompletionToken&& token
     ) {
         namespace http = boost::beast::http;
-        boost::asio::handler_type<CompletionToken, void(responses)> handler(
-            std::forward<CompletionToken>(token)
-        );
-        boost::asio::async_result<decltype(handler)> result(handler);
+        using Sig = void(error_code, responses);
+        using Result = __asio::async_result<CompletionToken, Sig>;
+        using Handler = typename Result::completion_handler_type;
+        Handler handler(std::forward<CompletionToken>(token));
+        Result result(handler);
         boost::asio::spawn([
             req_vec = std::move(req_vec),
             p_ioc = ioc_,
@@ -49,34 +52,45 @@ public:
             boost::system::error_code ec;
             tcp::resolver   resolver    {ioc};
             tcp::socket     socket      {ioc};
+            responses       reps;
             const auto addr = resolver.async_resolve(
                 host, port, yield[ec]
             );
-            if(ec) return logger().error("resolve failed");
+            if(ec) {
+                logger().error("resolve failed");
+                return handler(ec, std::move(reps));
+            }
 
             boost::asio::async_connect(socket, 
                 addr.begin(), addr.end(),
                 yield[ec]
             );
-            if(ec) return logger().error("connect failed");
+            if(ec) {
+                logger().error("connect failed");
+                return handler(ec, std::move(reps));
+            }
 
             for(auto& req_param : req_vec) {
                 auto req = req_param.make_request(host, version);
                 http::async_write(socket, req, yield[ec]);
-                if(ec) return logger().error("request failed");
+                if(ec) {
+                    logger().error("request failed");
+                    return handler(ec, std::move(reps));
+                }
             }
 
             boost::beast::flat_buffer recv_buf;
-            responses reps(req_vec.size());
+            reps.resize(req_vec.size());
             for(auto&& rep : reps) {
                 http::async_read(socket, recv_buf, rep, yield[ec]);
             }
             socket.shutdown(tcp::socket::shutdown_both, ec);
 
             if(ec && ec != boost::system::errc::not_connected) {
-                return logger().error("connection shutdown not gracefully");
+                logger().error("connection shutdown not gracefully");
+                return handler(ec, std::move(reps));
             }
-            handler(std::move(reps));
+            return handler(ec, std::move(reps));
         });
         return result.get();
     }

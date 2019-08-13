@@ -1,5 +1,6 @@
 #include <pixiu/client/core.hpp>
 #include <gtest/gtest.h>
+#include <boost/beast/core/buffers_to_string.hpp>
 
 class core_test 
 : public ::testing::Test 
@@ -39,10 +40,12 @@ TEST_F(core_test, async_read_test) {
   boost::asio::io_context ioc;
   auto core = pixiu::client::make_core(ioc);
   core->async_read(
-    "127.0.0.1", "8080", 
+    "www.google.com", "80", 
     11, {}, 
-    [](pixiu::client::responses reps){
-
+    [](boost::system::error_code ec, pixiu::client::responses reps){
+      for(auto& rep : reps) {
+        std::cout << boost::beast::buffers_to_string(rep.body().data()) << std::endl;
+      }
     }
   );
   ioc.run();

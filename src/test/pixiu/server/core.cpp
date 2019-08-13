@@ -17,7 +17,7 @@ protected:
     loggers["core"] = {
       {"level", "debug"}
     };
-    loggers["request_handler"] = {
+    loggers["request_router"] = {
       {"level", "debug"}
     };
     pixiu::logger::config(data);

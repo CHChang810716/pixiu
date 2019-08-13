@@ -1,2 +1,2 @@
-# include(cmake/scheme/test.cmake)
-# target_link_libraries(${AKT_TARGET} PRIVATE pixiu-server-core)
+include(cmake/scheme/test.cmake)
+target_link_libraries(${AKT_TARGET} PRIVATE pixiu-client-core)

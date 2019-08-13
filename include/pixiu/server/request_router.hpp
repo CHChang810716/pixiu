@@ -87,6 +87,7 @@ struct request_router {
           req.target().find("..") != boost::beast::string_view::npos
       ) throw error::illegal_target(req.target().to_string());
 
+      logger().debug("request target: {}", req.target().to_string());
       auto handlers = search_handler(req.target());
 
       // Respond to HEAD request
