@@ -41,9 +41,6 @@ TEST_F(core_test, async_read_test) {
     }, 
     [&actual](boost::system::error_code ec, pixiu::client::responses reps){
       actual = buffers_to_string(reps.at(0).body().data());
-      // for(auto& rep : reps) {
-      //   std::cout << boost::beast::buffers_to_string(rep.body().data()) << std::endl;
-      // }
     }
   );
   ioc.run();

@@ -124,7 +124,8 @@ private:
         inter_rep.result(__http::status::ok);
       }
       inter_rep.version(req.version());
-      if(inter_rep.at(__http::field::server).empty()) {
+      auto itr = inter_rep.find(__http::field::server);
+      if(itr == inter_rep.end()) {
         inter_rep.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
       }
       inter_rep.keep_alive(req.keep_alive());
@@ -153,7 +154,8 @@ private:
         if(!inter_rep.payload_size()) {
           inter_rep.prepare_payload();
         }
-        if(inter_rep.at(__http::field::content_type).empty()) {
+        auto itr = inter_rep.find(__http::field::content_type);
+        if(itr == inter_rep.end()) {
           inter_rep.set(__http::field::content_type, "text/html");
         }
       });
