@@ -19,8 +19,6 @@ env:
 
 matrix:
   include:
-  #Linux Builds
-    #GCC
     - os: linux
       dist: bionic
       compiler: gcc
