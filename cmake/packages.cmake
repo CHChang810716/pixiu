@@ -23,12 +23,14 @@ hunter_add_package(Boost COMPONENTS
     filesystem
     coroutine
     context
+    thread
 )
 find_package(Boost 
     COMPONENTS 
         filesystem
         coroutine
         context
+        thread
     CONFIG
     REQUIRED
 )
