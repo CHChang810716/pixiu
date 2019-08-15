@@ -42,7 +42,7 @@ before_install:
 #build process step #2
 install:
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../stage
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../stage -DBUILD_TEST=ON
 
 #build process step #3
 before_script:  
@@ -51,6 +51,7 @@ before_script:
 #build process step #4
 script:
    - cmake --build . --target install
+   - ctest -VV
 
 # #build process step #5a
 # after_success:
