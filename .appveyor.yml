@@ -43,10 +43,11 @@ before_build:
 - echo NUMBER_OF_PROCESSORS=%NUMBER_OF_PROCESSORS%
 - ps: (Get-Item "${Env:WINDBG_DIR}\dbghelp.dll").VersionInfo
 - if "%APPVEYOR_REPO_TAG%"=="true" (set CMAKE_BUILD_TYPE=Release) else (set CMAKE_BUILD_TYPE=Debug)
-- cmake -H. -Bbuild\ -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% -DBUILD_TEST=ON -DCMAKE_INSTALL_PREFIX=stage\ -DCMAKE_INSTALL_PREFIX=%MINGW_DIR%\opt
+- cd build
+- cmake . -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE% -DBUILD_TEST=ON -DCMAKE_INSTALL_PREFIX="..\stage" -DCMAKE_INSTALL_PREFIX="..\%MINGW_DIR%\opt"
 
 build_script:
-- cmake --build build\ --target install
+- cmake --build . --target install
 
 after_build:
 - set Path=%WINDBG_DIR%;%Path%
