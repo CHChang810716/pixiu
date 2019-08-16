@@ -56,7 +56,7 @@ TEST_F(core_test, async_accept_test) {
   std::string actual;
   auto client = pixiu::client_bits::make_core(ioc2);
   client->async_read(
-    "127.0.0.1", "8080", 
+    "localhost", "8080", 
     11, {
       {"/", http::verb::get, {} }
     }, 
