@@ -19,6 +19,7 @@ project(pixiu
 )
 option(BUILD_TEST   "Build project with test"   OFF)
 option(INSTALL_DEPS "Install dependensies"      OFF)
+akt_show_var(CMAKE_PREFIX_PATH)
 include(cmake/toolchain_conf.cmake)
 include(cmake/packages.cmake)
 include(cmake/src.cmake)
