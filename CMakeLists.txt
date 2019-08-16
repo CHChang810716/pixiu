@@ -17,6 +17,10 @@ project(pixiu
     LANGUAGES C CXX 
     VERSION 0.0.0.1
 )
+
+hunter_add_package(Arkitekto)
+find_package(Arkitekto CONFIG REQUIRED)
+
 option(BUILD_TEST   "Build project with test"   OFF)
 option(INSTALL_DEPS "Install dependensies"      OFF)
 akt_show_var(CMAKE_PREFIX_PATH)

@@ -1,5 +1,3 @@
-hunter_add_package(Arkitekto)
-find_package(Arkitekto CONFIG REQUIRED)
 if(BUILD_TEST)
     hunter_add_package(GTest)
     find_package(GTest CONFIG REQUIRED)
