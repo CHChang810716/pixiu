@@ -10,7 +10,7 @@
 #include <boost/asio/connect.hpp>
 #include <utility>
 
-namespace pixiu::client {
+namespace pixiu::client_bits {
 
 namespace __http = boost::beast::http;
 namespace __asio = boost::asio;

@@ -13,7 +13,7 @@
 #include <pixiu/server/request_router.hpp>
 #include <boost/coroutine2/all.hpp>
 #include <boost/asio/spawn.hpp>
-namespace pixiu::server {
+namespace pixiu::server_bits {
 
 template<class RequestRouter>
 struct core
@@ -100,7 +100,7 @@ private:
 };
 // using core_ptr = std::shared_ptr<core>;
 // 
-template<class RequestRouter = pixiu::server::request_router >
+template<class RequestRouter = pixiu::server_bits::request_router >
 auto make_core(
   boost::asio::io_context& ioc,
   RequestRouter&& request_router = RequestRouter()

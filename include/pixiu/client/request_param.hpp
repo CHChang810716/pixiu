@@ -4,7 +4,7 @@
 #include <boost/beast/http.hpp>
 #include <nlohmann/json.hpp>
 #include <boost/beast/version.hpp>
-namespace pixiu::client {
+namespace pixiu::client_bits {
 
 struct request_param {
     std::string                 target  ;

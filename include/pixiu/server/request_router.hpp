@@ -6,7 +6,7 @@
 #include <regex>
 #include "error/all.hpp"
 #include <exception>
-namespace pixiu::server {
+namespace pixiu::server_bits {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;

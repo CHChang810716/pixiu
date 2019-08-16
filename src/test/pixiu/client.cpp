@@ -20,12 +20,12 @@ protected:
 
 // TEST_F(core_test, basic_test) {
 //   boost::asio::io_context ioc;
-//   pixiu::server::core core(ioc);
+//   pixiu::server_bits::core core(ioc);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 // TEST_F(core_test, bind_ip_test) {
 //   boost::asio::io_context ioc;
-//   pixiu::server::core core(ioc);
+//   pixiu::server_bits::core core(ioc);
 //   core.listen("0.0.0.0", 8080);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
@@ -33,13 +33,13 @@ TEST_F(core_test, async_read_test) {
   using namespace boost::beast;
   std::string actual;
   boost::asio::io_context ioc;
-  auto core = pixiu::client::make_core(ioc);
+  auto core = pixiu::client_bits::make_core(ioc);
   core->async_read(
     "www.posttestserver.com", "80", 
     11, {
       {"/", http::verb::get, {} }
     }, 
-    [&actual](boost::system::error_code ec, pixiu::client::responses reps){
+    [&actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
       actual = buffers_to_string(reps.at(0).body().data());
     }
   );

@@ -1,7 +1,7 @@
 #pragma once
 #include "base.hpp"
 #include <fmt/format.h>
-namespace pixiu::server::error {
+namespace pixiu::server_bits::error {
 
 struct unknown_method : public base {
   unknown_method(const std::string& name)

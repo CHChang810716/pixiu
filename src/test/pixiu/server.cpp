@@ -27,25 +27,25 @@ protected:
 
 // TEST_F(core_test, basic_test) {
 //   boost::asio::io_context ioc;
-//   pixiu::server::core core(ioc);
+//   pixiu::server_bits::core core(ioc);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 // TEST_F(core_test, bind_ip_test) {
 //   boost::asio::io_context ioc;
-//   pixiu::server::core core(ioc);
+//   pixiu::server_bits::core core(ioc);
 //   core.listen("0.0.0.0", 8080);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 TEST_F(core_test, async_accept_test) {
-  using request = pixiu::server::request_router::request;
+  using request = pixiu::server_bits::request_router::request;
   boost::asio::io_context ioc;
-  pixiu::server::request_router router;
-  router.get("/", [](const auto& req) -> pixiu::server::response {
+  pixiu::server_bits::request_router router;
+  router.get("/", [](const auto& req) -> pixiu::server_bits::response {
     http::response<http::string_body> rep;
     rep.body() = "hello world";
-    return pixiu::server::response(rep);
+    return pixiu::server_bits::response(rep);
   });
-  auto core = pixiu::server::make_core(ioc, std::move(router));
+  auto core = pixiu::server_bits::make_core(ioc, std::move(router));
   core->listen("0.0.0.0", 8080);
   // ioc.run();
   std::thread t([&ioc](){
@@ -54,13 +54,13 @@ TEST_F(core_test, async_accept_test) {
 
   boost::asio::io_context ioc2;
   std::string actual;
-  auto client = pixiu::client::make_core(ioc2);
+  auto client = pixiu::client_bits::make_core(ioc2);
   client->async_read(
-    "0.0.0.0", "8080", 
+    "127.0.0.1", "8080", 
     11, {
       {"/", http::verb::get, {} }
     }, 
-    [&actual](boost::system::error_code ec, pixiu::client::responses reps){
+    [&actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
       actual = buffers_to_string(reps.at(0).body().data());
     }
   );

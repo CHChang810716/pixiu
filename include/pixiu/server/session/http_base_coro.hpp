@@ -11,7 +11,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
 
-namespace pixiu::server::session {
+namespace pixiu::server_bits::session {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;

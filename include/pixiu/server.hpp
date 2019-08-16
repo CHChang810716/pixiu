@@ -3,8 +3,6 @@
 namespace pixiu {
 
 struct server {
-  server(boost::asio::io_context& ioc)
-  {}
 
 private:
   

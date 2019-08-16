@@ -3,7 +3,7 @@
 #include <pixiu/server/response.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
-namespace pixiu::server::error {
+namespace pixiu::server_bits::error {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;

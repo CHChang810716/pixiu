@@ -2,7 +2,7 @@
 #include "http_base_coro.hpp"
 #include <boost/asio/ip/tcp.hpp>
 #include "interface.hpp"
-namespace pixiu::server::session {
+namespace pixiu::server_bits::session {
 namespace __ip = boost::asio::ip;
 template<class RequestRouter>
 struct plain_http 

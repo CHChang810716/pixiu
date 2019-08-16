@@ -1,7 +1,7 @@
 #pragma once
 #include "base.hpp"
 #include <fmt/format.h>
-namespace pixiu::server::error {
+namespace pixiu::server_bits::error {
 
 struct server_error : public base {
   server_error(const std::string& what)
