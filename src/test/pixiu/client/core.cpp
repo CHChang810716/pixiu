@@ -26,7 +26,7 @@ protected:
 // TEST_F(core_test, bind_ip_test) {
 //   boost::asio::io_context ioc;
 //   pixiu::server::core core(ioc);
-//   core.listen("127.0.0.1", 8080);
+//   core.listen("0.0.0.0", 8080);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 TEST_F(core_test, async_read_test) {

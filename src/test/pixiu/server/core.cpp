@@ -33,7 +33,7 @@ protected:
 // TEST_F(core_test, bind_ip_test) {
 //   boost::asio::io_context ioc;
 //   pixiu::server::core core(ioc);
-//   core.listen("127.0.0.1", 8080);
+//   core.listen("0.0.0.0", 8080);
 //   ioc.run_for(std::chrono::seconds(2));
 // }
 TEST_F(core_test, async_accept_test) {
@@ -46,7 +46,7 @@ TEST_F(core_test, async_accept_test) {
     return pixiu::server::response(rep);
   });
   auto core = pixiu::server::make_core(ioc, std::move(router));
-  core->listen("127.0.0.1", 8080);
+  core->listen("0.0.0.0", 8080);
   // ioc.run();
   std::thread t([&ioc](){
     ioc.run_for(std::chrono::seconds(5));
@@ -56,7 +56,7 @@ TEST_F(core_test, async_accept_test) {
   std::string actual;
   auto client = pixiu::client::make_core(ioc2);
   client->async_read(
-    "127.0.0.1", "8080", 
+    "0.0.0.0", "8080", 
     11, {
       {"/", http::verb::get, {} }
     }, 
