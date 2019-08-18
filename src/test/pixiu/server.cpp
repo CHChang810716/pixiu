@@ -1,6 +1,6 @@
 #include <pixiu/server.hpp>
 #include <gtest/gtest.h>
-#include <pixiu/client/core.hpp>
+#include <pixiu/client.hpp>
 using namespace boost::beast;
 class server_test 
 : public ::testing::Test 
@@ -30,7 +30,7 @@ auto client_run(ServIOC& serv_ioc, Func&& func) {
     serv_ioc.run_for(std::chrono::seconds(5));
   });
   boost::asio::io_context ioc2;
-  auto client = pixiu::client_bits::make_core(ioc2);
+  auto client = pixiu::make_client(ioc2);
   func(client);
   ioc2.run();
   t.join();
@@ -47,7 +47,7 @@ TEST_F(server_test, convenient_use) {
   server.listen("0.0.0.0", 8080);
 
   client_run(server, [&test_actual](auto& client){
-    client->async_read(
+    client.async_read(
       "localhost", "8080", 
       11, {
         {"/", http::verb::get, {} }
