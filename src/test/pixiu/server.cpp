@@ -35,6 +35,16 @@ auto client_run(ServIOC& serv_ioc, Func&& func) {
   ioc2.run();
   t.join();
 }
+template<class... T>
+using params = pixiu::server_bits::params<T...>;
+
+TEST(router_test, param_parse) {
+  pixiu::server_bits::request_router router;
+  router.get("/", params<int, float>("a", "b"), 
+    [](const auto& req, int a, float b) -> pixiu::server_bits::response {
+    }
+  );
+}
 TEST_F(server_test, convenient_use) {
   std::string test_actual;
 

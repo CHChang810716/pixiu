@@ -6,6 +6,7 @@
 #include <regex>
 #include "error/all.hpp"
 #include <exception>
+#include "params.hpp"
 namespace pixiu::server_bits {
 
 namespace __http    = boost::beast::http  ;
@@ -49,6 +50,17 @@ struct request_router {
   void get(const std::string& target_pattern, get_handler&& gh) {
     std::get<1>(on_target_requests_[target_pattern]) = 
       std::move(gh);
+  }
+  template<class... Type, class Func>
+  void get(
+    const std::string&    target, 
+    params<Type...>&&     param_types, 
+    Func&&                func
+  ) {
+    get(target, [p_t = std::move(param_types)](const auto& req) -> response {
+      p_t.parse(req.target());
+    });
+
   }
   void head(const std::string& target_pattern, head_handler&& hh) {
     std::get<0>(on_target_requests_[target_pattern]) = 
