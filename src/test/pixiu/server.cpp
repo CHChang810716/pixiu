@@ -37,14 +37,27 @@ auto client_run(ServIOC& serv_ioc, Func&& func) {
 }
 template<class... T>
 using params = pixiu::server_bits::params<T...>;
-
-TEST(router_test, param_parse) {
-  pixiu::server_bits::request_router router;
-  router.get("/", params<int, float>("a", "b"), 
-    [](const auto& req, int a, float b) -> pixiu::server_bits::response {
-    }
+TEST(params_test, parse) {
+  params<int, float, std::string, std::uint16_t> parser(
+    "integer", "float32", "str", "uint_16bit"
   );
+  auto tuple = parser.parse("www.asdf.com/mysite?integer=100&float32=3.414&str=qsefth&uint_16bit=65535");
+  EXPECT_EQ(boost::hana::at_c<0>(tuple), int(100));
+  EXPECT_TRUE(std::abs(boost::hana::at_c<1>(tuple) - float(3.414)) < 0.0001);
+  EXPECT_EQ(boost::hana::at_c<2>(tuple), "qsefth");
+  EXPECT_EQ(boost::hana::at_c<3>(tuple), std::uint16_t(65535));
 }
+
+// TEST(router_test, param_parse) {
+//   pixiu::server_bits::request_router router;
+//   router.get("/", params<int, float>("a", "b"), 
+//     [](const auto& req, int a, float b) -> pixiu::server_bits::response {
+//       http::response<http::string_body> rep;
+//       rep.body() = std::to_string(a + b);
+//       return pixiu::server_bits::response(rep);
+//     }
+//   );
+// }
 TEST_F(server_test, convenient_use) {
   std::string test_actual;
 

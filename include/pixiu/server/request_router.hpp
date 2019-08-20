@@ -57,8 +57,11 @@ struct request_router {
     params<Type...>&&     param_types, 
     Func&&                func
   ) {
-    get(target, [p_t = std::move(param_types)](const auto& req) -> response {
-      p_t.parse(req.target());
+    get(target, [p_t = std::move(param_types), func = std::move(func)](const auto& req) -> response {
+      auto params_tuple = p_t.parse(req.target());
+      boost::hana::unpack(params_tuple, [&req, &func](auto&&... args){
+        func(req, std::move(args)...);
+      });
     });
 
   }
