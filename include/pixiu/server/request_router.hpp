@@ -59,8 +59,8 @@ struct request_router {
   ) {
     get(target, [p_t = std::move(param_types), func = std::move(func)](const auto& req) -> response {
       auto params_tuple = p_t.parse(req.target());
-      boost::hana::unpack(params_tuple, [&req, &func](auto&&... args){
-        func(req, std::move(args)...);
+      return boost::hana::unpack(params_tuple, [&req, &func](auto&&... args){
+        return func(req, std::move(args)...);
       });
     });
 
@@ -97,13 +97,16 @@ struct request_router {
   ) const {
     try {
       // Request path must be absolute and not contain "..".
-      if( req.target().empty() ||
-          req.target()[0] != '/' ||
-          req.target().find("..") != boost::beast::string_view::npos
+      auto target = req.target();
+      if( target.empty() ||
+          target[0] != '/' ||
+          target.find("..") != boost::beast::string_view::npos
       ) throw error::illegal_target(req.target().to_string());
 
       logger().debug("request target: {}", req.target().to_string());
-      auto handlers = search_handler(req.target());
+      auto query_start = target.find_first_of('?');
+      auto target_without_query = target.substr(0, query_start);
+      auto handlers = search_handler(target_without_query);
 
       // Respond to HEAD request
       switch(req.method()) {

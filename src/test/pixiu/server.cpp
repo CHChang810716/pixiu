@@ -1,6 +1,10 @@
 #include <pixiu/server.hpp>
 #include <gtest/gtest.h>
 #include <pixiu/client.hpp>
+#include <pixiu/response.hpp>
+#include <pixiu/request_utils.hpp>
+#include <pixiu/request_router.hpp>
+
 using namespace boost::beast;
 class server_test 
 : public ::testing::Test 
@@ -48,16 +52,29 @@ TEST(params_test, parse) {
   EXPECT_EQ(boost::hana::at_c<3>(tuple), std::uint16_t(65535));
 }
 
-// TEST(router_test, param_parse) {
-//   pixiu::server_bits::request_router router;
-//   router.get("/", params<int, float>("a", "b"), 
-//     [](const auto& req, int a, float b) -> pixiu::server_bits::response {
-//       http::response<http::string_body> rep;
-//       rep.body() = std::to_string(a + b);
-//       return pixiu::server_bits::response(rep);
-//     }
-//   );
-// }
+TEST_F(server_test, router_call) {
+  pixiu::request_router router;
+  router.get("/", params<int, float>("a", "b"), 
+    [](const auto& req, int a, float b) {
+      return pixiu::make_response(std::to_string(a + b));
+    }
+  );
+  auto req = pixiu::make_request(
+    http::verb::get,
+    "localhost:8080","/", 
+    11, {
+      {"a", 12},
+      {"b", 2.4}
+    }
+  );
+  router(std::move(req), [](auto&& rep){
+    using Rep = std::decay_t<decltype(rep)>;
+    if constexpr(std::is_same_v<typename Rep::body_type, http::string_body>) {
+      auto actual = std::stod(rep.body());
+      EXPECT_TRUE(std::abs(actual - 14.4) < 0.001);
+    }
+  });
+}
 TEST_F(server_test, convenient_use) {
   std::string test_actual;
 

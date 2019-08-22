@@ -4,10 +4,11 @@
 #include <boost/beast/http.hpp>
 #include <nlohmann/json.hpp>
 #include <boost/beast/version.hpp>
+#include <fmt/format.h>
 namespace pixiu::client_bits {
 
 struct request_param {
-    std::string                 target  ;
+    boost::string_view          target  ;
     boost::beast::http::verb    method  ;
     nlohmann::json              param   ;
     auto make_request(
@@ -22,7 +23,14 @@ struct request_param {
         request.method(method);
         request.set(http::field::host, host);
         request.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        request.target(target);
+        std::string uri = target.to_string();
+        char spliter = '?';
+        for(auto itr = param.begin(); itr != param.end(); itr++) {
+            uri += spliter;
+            uri += fmt::format("{}={}", itr.key(), itr.value().dump());
+            spliter = '&';
+        }
+        request.target(uri);
         return request;
     }
 };
