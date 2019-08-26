@@ -9,7 +9,7 @@
 #include <pixiu/server/request_router.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-namespace pixiu::server::session {
+namespace pixiu::server_bits::session {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;

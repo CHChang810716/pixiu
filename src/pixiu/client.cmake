@@ -5,6 +5,7 @@ target_link_libraries(${AKT_TARGET} PUBLIC
   OpenSSL::Crypto
   Boost::coroutine
   Boost::context
+  Boost::thread
 )
 if(MINGW)
   target_link_libraries(${AKT_TARGET} PUBLIC 

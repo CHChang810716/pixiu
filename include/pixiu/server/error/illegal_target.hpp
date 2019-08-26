@@ -1,7 +1,7 @@
 #pragma once
 #include "base.hpp"
 #include <fmt/format.h>
-namespace pixiu::server::error {
+namespace pixiu::server_bits::error {
 
 struct illegal_target : public base {
   illegal_target(const std::string& name)

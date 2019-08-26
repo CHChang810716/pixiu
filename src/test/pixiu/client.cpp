@@ -1,10 +1,10 @@
-#include <pixiu/client/core.hpp>
 #include <gtest/gtest.h>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <pixiu/path.hpp>
 #include <iterator>
+#include <pixiu/client.hpp>
 
-class core_test 
+class client_test 
 : public ::testing::Test 
 {
 protected:
@@ -18,28 +18,17 @@ protected:
   }
 };
 
-// TEST_F(core_test, basic_test) {
-//   boost::asio::io_context ioc;
-//   pixiu::server::core core(ioc);
-//   ioc.run_for(std::chrono::seconds(2));
-// }
-// TEST_F(core_test, bind_ip_test) {
-//   boost::asio::io_context ioc;
-//   pixiu::server::core core(ioc);
-//   core.listen("127.0.0.1", 8080);
-//   ioc.run_for(std::chrono::seconds(2));
-// }
-TEST_F(core_test, async_read_test) {
+TEST_F(client_test, async_read_test) {
   using namespace boost::beast;
   std::string actual;
   boost::asio::io_context ioc;
-  auto core = pixiu::client::make_core(ioc);
-  core->async_read(
+  auto client = pixiu::make_client(ioc);
+  client.async_read(
     "www.posttestserver.com", "80", 
     11, {
       {"/", http::verb::get, {} }
     }, 
-    [&actual](boost::system::error_code ec, pixiu::client::responses reps){
+    [&actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
       actual = buffers_to_string(reps.at(0).body().data());
     }
   );

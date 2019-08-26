@@ -13,36 +13,51 @@
 #include <pixiu/server/request_router.hpp>
 #include <boost/coroutine2/all.hpp>
 #include <boost/asio/spawn.hpp>
-namespace pixiu::server {
+namespace pixiu::server_bits {
 
-template<class RequestRouter>
+template<class IOContextAR, class RequestRouterAR>
 struct core
-: public std::enable_shared_from_this<core<RequestRouter>>
+: public std::enable_shared_from_this<
+  core<IOContextAR, RequestRouterAR>
+>
 {
 private:
   using error_code        = boost::system::error_code;
   using tcp               = boost::asio::ip::tcp;
   using tcp_endp          = tcp::endpoint;
-  using io_context        = boost::asio::io_context;
+  // using io_context        = boost::asio::io_context;
   using socket_base       = boost::asio::socket_base;
   using tcp_acceptor      = tcp::acceptor;
   using tcp_socket        = tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
-  using request_router_t  = RequestRouter;
+  using request_router_t  = std::decay_t<RequestRouterAR>;
   static auto& logger() { return logger::get("core"); }
 public:
+
+  // ioc is shared reference, request_router is shared reference
   core(
-    io_context&           ioc,
-    request_router_t&&    request_router
+    IOContextAR&          ioc,
+    RequestRouterAR&&     request_router
   )
-  : ioc_              (&ioc)
+  : ioc_              (ioc)
   , acceptor_         (ioc)
-  , request_router_   (std::move(request_router))
+  , request_router_   (
+    std::forward<RequestRouterAR>(request_router)
+  )
   {}
 
-  using request      = __http::request<__http::string_body>;
+  // owning ioc, shared request_router
+  core(RequestRouterAR&& request_router)
+  : ioc_              ()
+  , acceptor_         (ioc_)
+  , request_router_   (
+    std::forward<RequestRouterAR>(request_router)
+  )
+  {}
+
+
   void listen(tcp_endp ep) {
-    boost::asio::spawn(*ioc_, [
+    boost::asio::spawn(ioc_, [
       _self = this->shared_from_this(), this,
       ep = std::move(ep)
     ](boost::asio::yield_context yield){
@@ -63,7 +78,7 @@ public:
       error_code_throw(ec, "acceptor listen failed");
       for(;;) {
         flat_buffer               recv_buffer ;
-        tcp_socket                socket      (*ioc_);
+        tcp_socket                socket      (ioc_);
         acceptor_.async_accept(socket, yield[ec]);
         if(ec) {
           logger().error("accept failed");
@@ -87,6 +102,14 @@ public:
       boost::asio::ip::make_address(ip), port
     });
   }
+  request_router_t& request_router() {
+    return request_router_;
+  }
+  void run() { ioc_.run(); }
+
+  template<class DU>
+  void run_for(DU&& du) { ioc_.run_for(du); }
+
   ~core() {
     if(acceptor_.is_open()) {
       acceptor_.close();
@@ -94,20 +117,20 @@ public:
     logger().debug("core destroy");
   }
 private:
-  io_context*                  ioc_             ;
+  IOContextAR                  ioc_             ;
   tcp_acceptor                 acceptor_        ;
-  const request_router_t       request_router_  ;
+  RequestRouterAR              request_router_  ;
 };
 // using core_ptr = std::shared_ptr<core>;
 // 
-template<class RequestRouter = pixiu::server::request_router >
-auto make_core(
-  boost::asio::io_context& ioc,
-  RequestRouter&& request_router = RequestRouter()
-) {
-  return std::make_shared<
-    core<RequestRouter>
-  >(ioc, std::move(request_router));
-}
+// template<class RequestRouter>
+// auto make_core(
+//   boost::asio::io_context& ioc,
+//   RequestRouter& request_router
+// ) {
+//   return std::make_shared<
+//     core<RequestRouter>
+//   >(ioc, request_router));
+// }
 
 }

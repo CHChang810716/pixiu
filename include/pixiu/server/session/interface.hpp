@@ -3,7 +3,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <pixiu/macro.hpp>
 #include <functional>
-namespace pixiu::server::session {
+namespace pixiu::server_bits::session {
 struct interface {
 public:
   virtual void async_handle_requests() = 0;
@@ -11,6 +11,6 @@ public:
 };
 using interface_ptr = std::shared_ptr<interface>;
 }
-namespace pixiu::server {
+namespace pixiu::server_bits {
   using session_ptr = session::interface_ptr;
 }

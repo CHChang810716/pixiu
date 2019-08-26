@@ -8,7 +8,7 @@ set(
     "Hunter cache servers"
 )
 HunterGate(
-    URL "git@github.com:CHChang810716/hunter.git"
+    URL "https://github.com/CHChang810716/hunter.git"
     SHA1 2690729559ebe51dd880377b5395ac9447648be8
     FILEPATH ${CMAKE_CURRENT_LIST_DIR}/cmake/hunter_config.cmake
 )
@@ -17,8 +17,13 @@ project(pixiu
     LANGUAGES C CXX 
     VERSION 0.0.0.1
 )
+
+hunter_add_package(Arkitekto)
+find_package(Arkitekto CONFIG REQUIRED)
+
 option(BUILD_TEST   "Build project with test"   OFF)
 option(INSTALL_DEPS "Install dependensies"      OFF)
+akt_show_var(CMAKE_PREFIX_PATH)
 include(cmake/toolchain_conf.cmake)
 include(cmake/packages.cmake)
 include(cmake/src.cmake)

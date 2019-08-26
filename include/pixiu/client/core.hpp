@@ -10,14 +10,16 @@
 #include <boost/asio/connect.hpp>
 #include <utility>
 
-namespace pixiu::client {
+namespace pixiu::client_bits {
 
 namespace __http = boost::beast::http;
 namespace __asio = boost::asio;
 using response = __http::response<__http::dynamic_body>;
 using responses = std::vector<response>;
 
-struct core {
+template<class IOContextAR>
+struct core 
+: public std::enable_shared_from_this<core<IOContextAR>>{
 protected:
     static auto& logger() {
         return pixiu::logger::get("client");
@@ -25,8 +27,12 @@ protected:
 public:
     using tcp = boost::asio::ip::tcp;
     using error_code   = boost::system::error_code;
-    core(boost::asio::io_context& ioc)
-    : ioc_(&ioc)
+    using this_t = core<IOContextAR>;
+    core(IOContextAR& ioc)
+    : ioc_(ioc)
+    {}
+    core()
+    : ioc_()
     {}
     template<class CompletionToken>
     auto async_read(
@@ -42,16 +48,15 @@ public:
         using Handler = typename Result::completion_handler_type;
         Handler handler(std::forward<CompletionToken>(token));
         Result result(handler);
-        boost::asio::spawn([
+        boost::asio::spawn(ioc_, [
             req_vec = std::move(req_vec),
-            p_ioc = ioc_,
+            this, __self = this->shared_from_this(),
             host, port, version,
             handler
         ](boost::asio::yield_context yield){
-            auto& ioc = *p_ioc;
             boost::system::error_code ec;
-            tcp::resolver   resolver    {ioc};
-            tcp::socket     socket      {ioc};
+            tcp::resolver   resolver    {ioc_};
+            tcp::socket     socket      {ioc_};
             responses       reps;
             const auto addr = resolver.async_resolve(
                 host, port, yield[ec]
@@ -94,15 +99,10 @@ public:
         });
         return result.get();
     }
+    void run() {ioc_.run();}
 
 protected:
-    boost::asio::io_context* ioc_;
+    IOContextAR ioc_;
 };
-
-auto make_core(
-  boost::asio::io_context& ioc
-) {
-  return std::make_shared<core>(ioc);
-}
 
 }

@@ -5,7 +5,7 @@
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/file_body.hpp>
 
-namespace pixiu::server {
+namespace pixiu::server_bits {
 
 namespace __http    = boost::beast::http  ;
 using response_base = std::variant<

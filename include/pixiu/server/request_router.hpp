@@ -6,7 +6,8 @@
 #include <regex>
 #include "error/all.hpp"
 #include <exception>
-namespace pixiu::server {
+#include "params.hpp"
+namespace pixiu::server_bits {
 
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
@@ -50,6 +51,20 @@ struct request_router {
     std::get<1>(on_target_requests_[target_pattern]) = 
       std::move(gh);
   }
+  template<class... Type, class Func>
+  void get(
+    const std::string&    target, 
+    params<Type...>&&     param_types, 
+    Func&&                func
+  ) {
+    get(target, [p_t = std::move(param_types), func = std::move(func)](const auto& req) -> response {
+      auto params_tuple = p_t.parse(req.target());
+      return boost::hana::unpack(params_tuple, [&req, &func](auto&&... args){
+        return func(req, std::move(args)...);
+      });
+    });
+
+  }
   void head(const std::string& target_pattern, head_handler&& hh) {
     std::get<0>(on_target_requests_[target_pattern]) = 
       std::move(hh);
@@ -82,13 +97,16 @@ struct request_router {
   ) const {
     try {
       // Request path must be absolute and not contain "..".
-      if( req.target().empty() ||
-          req.target()[0] != '/' ||
-          req.target().find("..") != boost::beast::string_view::npos
+      auto target = req.target();
+      if( target.empty() ||
+          target[0] != '/' ||
+          target.find("..") != boost::beast::string_view::npos
       ) throw error::illegal_target(req.target().to_string());
 
       logger().debug("request target: {}", req.target().to_string());
-      auto handlers = search_handler(req.target());
+      auto query_start = target.find_first_of('?');
+      auto target_without_query = target.substr(0, query_start);
+      auto handlers = search_handler(target_without_query);
 
       // Respond to HEAD request
       switch(req.method()) {
