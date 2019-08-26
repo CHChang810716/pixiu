@@ -29,7 +29,7 @@ public:
   )
   : base_http_t         (ioc, request_router)
   , socket_             (std::move(socket))
-  , recv_buffer_        (std::move(recv_buffer))
+  // , recv_buffer_        (std::move(recv_buffer))
   {}
 
   virtual void async_handle_requests() override {
@@ -64,10 +64,10 @@ private:
   tcp_socket& stream() {
     return socket_;
   }
-  flat_buffer& recv_buffer() {
-    return recv_buffer_;
-  }
+  // flat_buffer& recv_buffer() {
+  //   return recv_buffer_;
+  // }
   tcp_socket          socket_         ;
-  flat_buffer         recv_buffer_    ;
+  // flat_buffer         recv_buffer_    ;
 };
 }

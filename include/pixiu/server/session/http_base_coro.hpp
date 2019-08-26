@@ -78,12 +78,8 @@ protected:
     );
   }
 
-  void async_recv_requests() {
-    using request      = __http::request<__http::string_body>;
-    // read fiber
-    boost::asio::spawn(read_strand_, [__self = derived(), this](
-      boost::asio::yield_context yield
-    ) {
+  void async_recv_requests_impl(Derived* __self, boost::asio::yield_context& yield) {
+      using request      = __http::request<__http::string_body>;
       // currently we only focus on short message
       // multi-part message is not support
       flat_buffer   req_buffer  ;
@@ -128,6 +124,14 @@ protected:
       } catch(const std::exception& e) {
         logger().error(e.what());
       }
+  }
+
+  void async_recv_requests() {
+    // read fiber
+    boost::asio::spawn(read_strand_, [__self = derived(), this](
+      boost::asio::yield_context yield
+    ) {
+      async_recv_requests_impl(__self.get(), yield);
     });
   }
   template<class Rep>
