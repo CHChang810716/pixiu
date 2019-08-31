@@ -10,6 +10,7 @@
 // #include <future_beast/detect_ssl.hpp>
 #include <pixiu/server/session/interface.hpp>
 #include <pixiu/server/session/plain_http.hpp>
+#include <pixiu/server/session/tls_http.hpp>
 #include <pixiu/server/request_router.hpp>
 #include <boost/coroutine2/all.hpp>
 #include <boost/asio/spawn.hpp>
@@ -25,12 +26,13 @@ private:
   using error_code        = boost::system::error_code;
   using tcp               = boost::asio::ip::tcp;
   using tcp_endp          = tcp::endpoint;
-  // using io_context        = boost::asio::io_context;
   using socket_base       = boost::asio::socket_base;
   using tcp_acceptor      = tcp::acceptor;
   using tcp_socket        = tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
   using request_router_t  = std::decay_t<RequestRouterAR>;
+  using ssl_context       = boost::asio::ssl::context;
+
   static auto& logger() { return logger::get("core"); }
 public:
 
@@ -44,6 +46,7 @@ public:
   , request_router_   (
     std::forward<RequestRouterAR>(request_router)
   )
+  , ssl_ctx_          (nullptr)
   {}
 
   // owning ioc, shared request_router
@@ -53,6 +56,7 @@ public:
   , request_router_   (
     std::forward<RequestRouterAR>(request_router)
   )
+  , ssl_ctx_          (nullptr)
   {}
 
 
@@ -85,22 +89,44 @@ public:
           return ;
         }
         logger().debug("session run");
-        session_ptr p_session = std::make_shared<
-          session::plain_http<request_router_t>
-        >(
-          acceptor_.get_executor().context(),
-          std::move(socket),
-          request_router_,
-          std::move(recv_buffer)
+        auto session = make_session(
+          std::move(recv_buffer),
+          std::move(socket)
         );
-        p_session->async_handle_requests();
+        session->async_handle_requests();
       }
     });
+  }
+  session_ptr make_session(
+    flat_buffer&& recv_buffer,
+    tcp_socket&& socket
+  ) {
+    session_ptr p_session(nullptr);
+    if(ssl_ctx_) {
+      p_session.reset(new session::plain_http<request_router_t>(
+        acceptor_.get_executor().context(),
+        std::move(socket),
+        request_router_,
+        std::move(recv_buffer)
+      ));
+    } else {
+      p_session.reset(new session::tls_http<request_router_t> (
+        acceptor_.get_executor().context(),
+        std::move(socket),
+        *ssl_ctx_,
+        request_router_,
+        std::move(recv_buffer)
+      ));
+    }
+    return p_session;
   }
   void listen( const std::string& ip, unsigned short port) {
     listen(tcp_endp{ 
       boost::asio::ip::make_address(ip), port
     });
+  }
+  void set_tls_context(ssl_context& ctx) {
+    ssl_ctx_ = &ctx;
   }
   request_router_t& request_router() {
     return request_router_;
@@ -120,17 +146,8 @@ private:
   IOContextAR                  ioc_             ;
   tcp_acceptor                 acceptor_        ;
   RequestRouterAR              request_router_  ;
+  
+  ssl_context*                 ssl_ctx_         ;
 };
-// using core_ptr = std::shared_ptr<core>;
-// 
-// template<class RequestRouter>
-// auto make_core(
-//   boost::asio::io_context& ioc,
-//   RequestRouter& request_router
-// ) {
-//   return std::make_shared<
-//     core<RequestRouter>
-//   >(ioc, request_router));
-// }
 
 }

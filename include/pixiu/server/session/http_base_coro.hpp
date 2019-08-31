@@ -78,18 +78,18 @@ protected:
     );
   }
 
-  void async_recv_requests_impl(Derived* __self, boost::asio::yield_context& yield) {
+  void async_recv_requests_impl(boost::asio::yield_context& yield) {
       using request      = __http::request<__http::string_body>;
       // currently we only focus on short message
       // multi-part message is not support
-      flat_buffer   req_buffer  ;
+      flat_buffer&  req_buffer = derived()->recv_buffer();
       request       req         ;
       error_code    ec          ;
       try {
         while(true) {
           // if(writer_msg_queue_.write_available() <= 0) continue;
-          __self->set_timer();
-          __http::async_read(__self->stream(), req_buffer, req, yield[ec]);
+          derived()->set_timer();
+          __http::async_read(derived()->stream(), req_buffer, req, yield[ec]);
           pending_req_num_ += 1;
           logger().debug("request received");
           // timer close socket
@@ -99,7 +99,7 @@ protected:
           }
           if(ec == __http::error::end_of_stream) {
             logger().debug("request eof");
-            return __self->on_eof();
+            return derived()->on_eof();
           }
           if(ec)
             return logger().error("receive request failed");
@@ -108,17 +108,17 @@ protected:
 
           request_router_->operator()(
             std::move(req), 
-            [__self, this] (auto response) mutable {
+            [this] (auto response) mutable {
               logger().debug("response created");
-              __self->async_send_response(std::move(response));
+              derived()->async_send_response(std::move(response));
             }
           );
 
           // TODO: make multi-part message work from here
           // if(/* is multi-part message */false) {
           // } else {
-          //   __self->set_timer();
-          //   __http::async_read(__self->stream(), req_buffer, req, yield);
+          //   derived()->set_timer();
+          //   __http::async_read(derived()->stream(), req_buffer, req, yield);
           // }
         }
       } catch(const std::exception& e) {
@@ -131,7 +131,7 @@ protected:
     boost::asio::spawn(read_strand_, [__self = derived(), this](
       boost::asio::yield_context yield
     ) {
-      async_recv_requests_impl(__self.get(), yield);
+      async_recv_requests_impl(yield);
     });
   }
   template<class Rep>

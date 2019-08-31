@@ -6,10 +6,13 @@ namespace pixiu::server_bits::session {
 namespace __ip = boost::asio::ip;
 template<class RequestRouter>
 struct plain_http 
-: public http_base<plain_http<RequestRouter>, RequestRouter> 
+: public http_base<
+  plain_http<RequestRouter>, 
+  RequestRouter
+> 
 , public std::enable_shared_from_this<
-    plain_http<RequestRouter>
-  > 
+  plain_http<RequestRouter>
+> 
 , public interface
 {
 friend http_base<plain_http<RequestRouter>, RequestRouter>;
@@ -25,11 +28,11 @@ public:
     __asio::io_context&       ioc,
     tcp_socket                socket,
     const request_router_t&   request_router,
-    flat_buffer               recv_buffer = flat_buffer()
+    flat_buffer               recv_buffer
   )
   : base_http_t         (ioc, request_router)
   , socket_             (std::move(socket))
-  // , recv_buffer_        (std::move(recv_buffer))
+  , recv_buffer_        (std::move(recv_buffer))
   {}
 
   virtual void async_handle_requests() override {
@@ -64,10 +67,10 @@ private:
   tcp_socket& stream() {
     return socket_;
   }
-  // flat_buffer& recv_buffer() {
-  //   return recv_buffer_;
-  // }
+  flat_buffer& recv_buffer() {
+    return recv_buffer_;
+  }
   tcp_socket          socket_         ;
-  // flat_buffer         recv_buffer_    ;
+  flat_buffer         recv_buffer_    ;
 };
 }
