@@ -37,6 +37,7 @@ struct server
     return *this;
   }
 
+
 private:
   core_ptr impl_;
 };

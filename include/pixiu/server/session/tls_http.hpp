@@ -45,6 +45,8 @@ public:
         base_http_t::read_strand_, 
         [__self = this->derived(), this](boost::asio::yield_context yield) {
             boost::system::error_code ec;
+            // TODO: timeout detection
+            base_http_t::set_timer();
             stream_.async_handshake(
                 __ssl::stream_base::server, 
                 yield[ec]
@@ -65,22 +67,23 @@ private:
   void async_send_response(
     __http::message<isRequest, Body, Fields> msg
   ) {
-    // stream_.async_handshake();
-    // return base_http_t::async_send_response(
-    //   std::move(msg)
-    // );
+    return base_http_t::async_send_response(
+      std::move(msg)
+    );
   }
   void async_recv_request() {
     return base_http_t::async_recv_request(this->shared_from_this());
   }
-  void on_eof() {
-    // boost::system::error_code ec;
-    // stream_.async_shutdown(ec);
+  void on_eof(boost::asio::yield_context& yield) {
+    boost::system::error_code ec;
+    stream_.async_shutdown(yield[ec]);
+    if(ec) {
+      return logger().debug("shutdown failed");
+    }
   }
   void on_timeout() {
-    // boost::system::error_code ec;
-    // socket_.shutdown(__ip::tcp::socket::shutdown_both, ec);
-    // socket_.close(ec);
+    boost::system::error_code ec;
+    stream_.shutdown(ec);
   }
   ssl_stream& stream() {
     return stream_;

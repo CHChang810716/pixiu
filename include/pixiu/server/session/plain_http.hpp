@@ -55,7 +55,7 @@ private:
   void async_recv_request() {
     return base_http_t::async_recv_request(this->shared_from_this());
   }
-  void on_eof() {
+  void on_eof(boost::asio::yield_context& yield) {
     boost::system::error_code ec;
     socket_.shutdown(__ip::tcp::socket::shutdown_send, ec);
   }

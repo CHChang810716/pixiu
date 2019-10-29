@@ -99,7 +99,7 @@ protected:
           }
           if(ec == __http::error::end_of_stream) {
             logger().debug("request eof");
-            return derived()->on_eof();
+            return derived()->on_eof(yield);
           }
           if(ec)
             return logger().error("receive request failed");
@@ -136,15 +136,15 @@ protected:
   }
   template<class Rep>
   void async_send_response(Rep response) {
-    boost::asio::post(
+    boost::asio::spawn(
       write_strand_, 
       [
         __self = derived(), this, 
         response = std::move(response)
-      ]() mutable {
+      ](boost::asio::yield_context yield) mutable {
         error_code ec;
         auto close = response.need_eof();
-        __http::write(__self->stream(), response, ec);
+        __http::async_write(__self->stream(), response, yield[ec]);
         pending_req_num_ -= 1;
         if(ec == __asio::error::operation_aborted) {
           logger().debug("response: operation aborted");
@@ -154,7 +154,7 @@ protected:
           return logger().error("send response failed");
         if(close) {
           logger().debug("response: do close");
-          return __self->on_eof();
+          return __self->on_eof(yield);
         }
       }
     );
