@@ -67,6 +67,7 @@ TEST_F(server_test, router_call) {
       {"b", 2.4}
     }
   );
+
   router(std::move(req), [](auto&& rep){
     using Rep = std::decay_t<decltype(rep)>;
     if constexpr(std::is_same_v<typename Rep::body_type, http::string_body>) {
@@ -75,46 +76,19 @@ TEST_F(server_test, router_call) {
     }
   });
 }
-TEST_F(server_test, convenient_use) {
-  std::string test_actual;
-
-  auto server = pixiu::make_server();
-  server.get("/", [](const auto& req) -> pixiu::server_bits::response {
-    http::response<http::string_body> rep;
-    rep.body() = "hello world";
-    return pixiu::server_bits::response(rep);
-  });
-  server.listen("0.0.0.0", 8080);
-
-  client_run(server, [&test_actual](auto& client){
-    client.async_read(
-      "localhost", "8080", 
-      11, {
-        {"/", http::verb::get, {} }
-      }, 
-      [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
-        test_actual = buffers_to_string(reps.at(0).body().data());
-      }
-    );
-  });
-  EXPECT_EQ(test_actual, "hello world");
-}
-// TEST_F(server_test, manual_request_router) {
-//   std::this_thread::sleep_for(std::chrono::seconds(10));
+// TEST_F(server_test, convenient_use) {
 //   std::string test_actual;
 // 
-//   boost::asio::io_context ioc;
-//   pixiu::server_bits::request_router router;
-//   router.get("/", [](const auto& req) -> pixiu::server_bits::response {
+//   auto server = pixiu::make_server();
+//   server.get("/", [](const auto& req) -> pixiu::server_bits::response {
 //     http::response<http::string_body> rep;
 //     rep.body() = "hello world";
 //     return pixiu::server_bits::response(rep);
 //   });
-//   auto core = pixiu::make_server(ioc, router);
-//   core.listen("0.0.0.0", 8080);
+//   server.listen("0.0.0.0", 8080);
 // 
-//   client_run(ioc, [&test_actual](auto& client){
-//     client->async_read(
+//   client_run(server, [&test_actual](auto& client){
+//     client.async_read(
 //       "localhost", "8080", 
 //       11, {
 //         {"/", http::verb::get, {} }
@@ -126,3 +100,31 @@ TEST_F(server_test, convenient_use) {
 //   });
 //   EXPECT_EQ(test_actual, "hello world");
 // }
+TEST_F(server_test, manual_request_router) {
+  std::string test_actual;
+
+  pixiu::request_router router;
+  router.get("/", params<int, float>("a", "b"), 
+    [](const auto& req, int a, float b) {
+      return pixiu::make_response(std::to_string(a + b));
+    }
+  );
+  auto server = pixiu::make_server(router);
+  server.listen("0.0.0.0", 8080);
+
+  client_run(server, [&test_actual](auto& client){
+    client.async_read(
+      "localhost", "8080", 
+      11, {
+        {"/", http::verb::get, {
+          {"a", 12},
+          {"b", 2.4}
+        } }
+      }, 
+      [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
+        test_actual = buffers_to_string(reps.at(0).body().data());
+      }
+    );
+  });
+  EXPECT_LT(std::abs(std::stod(test_actual) - 14.4), 0.01);
+}
