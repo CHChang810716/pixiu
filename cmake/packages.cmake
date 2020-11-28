@@ -32,7 +32,15 @@ find_package(Boost
     CONFIG
     REQUIRED
 )
-find_package(OpenSSL REQUIRED)
+if(WIN32)
+    set(H_CMAKE_MODUE_PATH ${H_CMAKE_MODUE_PATH})
+    unset(CMAKE_MODULE_PATH)
+    find_package(OpenSSL REQUIRED)
+    set(CMAKE_MODULE_PATH ${H_CMAKE_MODUE_PATH})
+else()
+    hunter_add_package(OpenSSL)
+    find_package(OpenSSL CONFIG REQUIRED)
+endif()
 get_property(tmp_include_dirs
   TARGET OpenSSL::SSL
   PROPERTY INTERFACE_INCLUDE_DIRECTORIES
