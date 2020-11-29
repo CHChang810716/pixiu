@@ -39,7 +39,7 @@ if(WIN32)
     set(CMAKE_MODULE_PATH ${H_CMAKE_MODUE_PATH})
 else()
     hunter_add_package(OpenSSL)
-    find_package(OpenSSL CONFIG REQUIRED)
+    find_package(OpenSSL REQUIRED)
 endif()
 get_property(tmp_include_dirs
   TARGET OpenSSL::SSL
