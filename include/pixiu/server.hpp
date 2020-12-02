@@ -43,8 +43,8 @@ private:
 };
 constexpr struct server_maker {
 
-  template<class IOContext, class RequestRouter = server_bits::request_router>
-  auto operator()(IOContext& ioc, RequestRouter&& rr = server_bits::request_router()) const {
+  template<class IOContext, class RequestRouter>
+  auto operator()(IOContext& ioc, RequestRouter&& rr) const {
     using server_t = server<IOContext&, RequestRouter>;
     server_t res;
     res.impl_.reset(new typename server_t::core(
