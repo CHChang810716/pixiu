@@ -25,7 +25,7 @@ private:
   using request_router_t  = RequestRouter;
   using base_http_t       = http_base<tls_http<RequestRouter>, RequestRouter>;
 
-  static auto& logger() { return logger::get("tsl_http"); }
+  static auto& logger() { return logger::get("tls_http"); }
 
 public:
   tls_http(

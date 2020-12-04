@@ -4,6 +4,7 @@
 #include <pixiu/response.hpp>
 #include <pixiu/request_utils.hpp>
 #include <pixiu/request_router.hpp>
+#include <thread>
 
 using namespace boost::beast;
 class server_test 

@@ -36,6 +36,9 @@ struct server
     impl_->run_for(du); 
     return *this;
   }
+  void set_tls_context(boost::asio::ssl::context& ctx) {
+    impl_->set_tls_context(ctx);
+  }
 
 
 private:
