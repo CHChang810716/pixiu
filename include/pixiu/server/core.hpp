@@ -102,7 +102,7 @@ public:
     tcp_socket&& socket
   ) {
     session_ptr p_session(nullptr);
-    if(ssl_ctx_) {
+    if(!ssl_ctx_) {
       p_session.reset(new session::plain_http<request_router_t>(
         acceptor_.get_executor().context(),
         std::move(socket),
