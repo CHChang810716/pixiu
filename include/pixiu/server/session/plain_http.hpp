@@ -46,10 +46,11 @@ public:
 private:
   template<bool isRequest, class Body, class Fields>
   void async_send_response(
-    __http::message<isRequest, Body, Fields> msg
+    __http::message<isRequest, Body, Fields> msg,
+    boost::asio::yield_context yield
   ) {
     return base_http_t::async_send_response(
-      std::move(msg)
+      std::move(msg), yield
     );
   }
   void async_recv_request() {

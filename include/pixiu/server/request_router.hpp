@@ -91,7 +91,7 @@ struct request_router {
     throw error::target_not_found(s_target);
   }
   template<class Func>
-  void operator()(
+  auto operator()(
     request  req, 
     Func&&   send
   ) const {
@@ -150,7 +150,7 @@ private:
     });
   }
   template<class Func, class HandlerTuple>
-  void method_case_head(request req, Func&& send, HandlerTuple& handlers) const {
+  auto method_case_head(request req, Func&& send, HandlerTuple& handlers) const {
     logger().debug("head request");
     auto [head_h, get_h] = handlers;
     response rep;
@@ -160,7 +160,7 @@ private:
     return rep.write(send);
   }
   template<class Func, class HandlerTuple>
-  void method_case_get(request req, Func&& send, HandlerTuple& handlers) const {
+  auto method_case_get(request req, Func&& send, HandlerTuple& handlers) const {
     logger().debug("get request");
     auto [head_h, get_h] = handlers;
     auto rep = get_h(req);

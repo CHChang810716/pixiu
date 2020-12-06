@@ -46,13 +46,14 @@ public:
         [__self = this->derived(), this](boost::asio::yield_context yield) {
             boost::system::error_code ec;
             // TODO: timeout detection
-            base_http_t::set_timer();
+            // base_http_t::set_timer();
+            logger().debug("handshake");
             stream_.async_handshake(
                 __ssl::stream_base::server, 
                 yield[ec]
             );
             if(ec)
-                return logger().error("handshake failed");
+                return logger().error("handshake failed, {}", ec.message());
             __self->async_recv_requests_impl(yield);
         }
     );
@@ -65,10 +66,11 @@ public:
 private:
   template<bool isRequest, class Body, class Fields>
   void async_send_response(
-    __http::message<isRequest, Body, Fields> msg
+    __http::message<isRequest, Body, Fields> msg,
+    boost::asio::yield_context yield
   ) {
     return base_http_t::async_send_response(
-      std::move(msg)
+      std::move(msg), yield
     );
   }
   void async_recv_request() {
@@ -76,14 +78,17 @@ private:
   }
   void on_eof(boost::asio::yield_context& yield) {
     boost::system::error_code ec;
+    logger().debug("async_shutdown");
     stream_.async_shutdown(yield[ec]);
     if(ec) {
-      return logger().debug("shutdown failed");
+      return logger().debug("shutdown failed, {}", ec.message());
     }
   }
   void on_timeout() {
     boost::system::error_code ec;
+    logger().debug("shutdown");
     stream_.shutdown(ec);
+    logger().debug("{}:{}, ec: {}", __FILE__, __LINE__, ec.message());
   }
   ssl_stream& stream() {
     return stream_;

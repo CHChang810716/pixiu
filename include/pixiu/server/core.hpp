@@ -67,6 +67,7 @@ public:
     ](boost::asio::yield_context yield){
       error_code ec;
 
+      logger().debug("acceptor open");
       acceptor_.open(ep.protocol(), ec);
       error_code_throw(ec, "acceptor open failed");
 
@@ -76,6 +77,7 @@ public:
       acceptor_.bind(ep, ec);
       error_code_throw(ec, "acceptor bind failed");
 
+      logger().debug("listen");
       acceptor_.listen(
         socket_base::max_listen_connections, ec
       );
@@ -83,6 +85,7 @@ public:
       for(;;) {
         flat_buffer               recv_buffer ;
         tcp_socket                socket      (ioc_);
+        logger().debug("async_accept");
         acceptor_.async_accept(socket, yield[ec]);
         if(ec) {
           logger().error("accept failed");

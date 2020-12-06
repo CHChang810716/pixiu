@@ -38,6 +38,7 @@ public:
   , read_strand_        (ioc)
   , write_strand_       (ioc)
   , pending_req_num_    (0)
+  , close_              (false)
   {}
   void timeout(int sec) {
     timeout_ = sec;
@@ -83,15 +84,17 @@ protected:
       // currently we only focus on short message
       // multi-part message is not support
       flat_buffer&  req_buffer = derived()->recv_buffer();
-      request       req         ;
       error_code    ec          ;
+      request       req         ;
       try {
         while(true) {
           // if(writer_msg_queue_.write_available() <= 0) continue;
-          derived()->set_timer();
+          // derived()->set_timer();
+          logger().debug("async_read");
           __http::async_read(derived()->stream(), req_buffer, req, yield[ec]);
           pending_req_num_ += 1;
           logger().debug("request received");
+          logger().debug("{}:{}, {}", __FILE__, __LINE__, ec.message());
           // timer close socket
           if(ec == __asio::error::operation_aborted) {
             logger().debug("request operation abort");
@@ -108,11 +111,12 @@ protected:
 
           request_router_->operator()(
             std::move(req), 
-            [this] (auto response) mutable {
+            [this, yield] (auto response) mutable {
               logger().debug("response created");
-              derived()->async_send_response(std::move(response));
+              return derived()->async_send_response(std::move(response), yield);
             }
           );
+          if(close_) break;
 
           // TODO: make multi-part message work from here
           // if(/* is multi-part message */false) {
@@ -121,6 +125,7 @@ protected:
           //   __http::async_read(derived()->stream(), req_buffer, req, yield);
           // }
         }
+        derived()->on_eof(yield);
       } catch(const std::exception& e) {
         logger().error(e.what());
       }
@@ -134,30 +139,56 @@ protected:
       async_recv_requests_impl(yield);
     });
   }
-  template<class Rep>
-  void async_send_response(Rep response) {
-    boost::asio::spawn(
-      write_strand_, 
-      [
-        __self = derived(), this, 
-        response = std::move(response)
-      ](boost::asio::yield_context yield) mutable {
-        error_code ec;
-        auto close = response.need_eof();
-        __http::async_write(__self->stream(), response, yield[ec]);
-        pending_req_num_ -= 1;
-        if(ec == __asio::error::operation_aborted) {
-          logger().debug("response: operation aborted");
-          return;
-        }
-        if(ec)
-          return logger().error("send response failed");
-        if(close) {
-          logger().debug("response: do close");
-          return __self->on_eof(yield);
-        }
-      }
-    );
+  // template<class Rep>
+  // void async_send_response(Rep response) {
+  template<bool isRequest, class Body, class Fields>
+  auto async_send_response(
+    __http::message<isRequest, Body, Fields>&& response, 
+    boost::asio::yield_context yield
+  ) {
+    error_code ec;
+    auto close = response.need_eof();
+    logger().debug("close: {}", close);
+    __http::serializer<isRequest, Body, Fields> sr{response};
+    logger().debug("async_write");
+    __http::async_write(derived()->stream(), sr, yield[ec]);
+    this->pending_req_num_ -= 1;
+    if(ec == __asio::error::operation_aborted) {
+      logger().debug("response: operation aborted");
+      return;
+    }
+    if(ec)
+      return logger().error("send response failed");
+    if(close) {
+      close_ = true;
+      //logger().debug("response: do close");
+      //return derived()->on_eof(yield);
+      return ;
+    }
+
+    // boost::asio::spawn(
+    //   write_strand_, 
+    //   [
+    //     __self = derived(), this, 
+    //     response = std::move(response)
+    //   ](boost::asio::yield_context yield) mutable {
+    //     error_code ec;
+    //     auto close = response.need_eof();
+    //     __http::serializer<isRequest, Body, Fields> sr{response};
+    //     __http::async_write(__self->stream(), response, yield[ec]);
+    //     pending_req_num_ -= 1;
+    //     if(ec == __asio::error::operation_aborted) {
+    //       logger().debug("response: operation aborted");
+    //       return;
+    //     }
+    //     if(ec)
+    //       return logger().error("send response failed");
+    //     if(close) {
+    //       logger().debug("response: do close");
+    //       return __self->on_eof(yield);
+    //     }
+    //   }
+    // );
   }
 
 
@@ -168,6 +199,7 @@ protected:
   strand                          read_strand_            ;
   strand                          write_strand_           ;
   std::atomic_int                 pending_req_num_        ;
+  bool                            close_                  ;
 
 };
 

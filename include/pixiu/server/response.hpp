@@ -17,15 +17,15 @@ struct response : public  response_base{
   using base = response_base;
   using base::base;
   template<class Sender>
-  void write(Sender& sender) {
-    std::visit([&sender](auto&& arg){
-      sender(std::move(arg));
+  auto write(Sender& sender) {
+    return std::visit([&sender](auto&& arg){
+      return sender(std::move(arg));
     }, static_cast<base&>(*this));
   }
   template<class Func>
-  void apply(Func&& func) {
-    std::visit([&func](auto&& arg){
-      func(arg);
+  auto apply(Func&& func) {
+    return std::visit([&func](auto&& arg){
+      return func(arg);
     }, static_cast<base&>(*this));
   }
 };
