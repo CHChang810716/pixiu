@@ -14,7 +14,7 @@ protected:
   static void SetUpTestCase() {
     nlohmann::json data;
     auto& loggers = data["loggers"];
-    // loggers["plain_http"] = {
+    // loggers["http"] = {
     //   {"level", "debug"}
     // };
     // loggers["http_base"] = {

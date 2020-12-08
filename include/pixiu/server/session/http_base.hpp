@@ -35,10 +35,8 @@ public:
   , timeout_            (15)
   , max_pending_req_num_(16)
   , timer_              (ioc)
-  , read_strand_        (ioc)
-  , write_strand_       (ioc)
+  , runner_strand_        (ioc)
   , pending_req_num_    (0)
-  , close_              (false)
   {}
   void timeout(int sec) {
     timeout_ = sec;
@@ -59,7 +57,6 @@ protected:
   }
   void set_timer() {
     auto on_timeout = [__self = derived(), this](auto ec) {
-      logger().debug("request timeout process");
       if(ec && ec != __asio::error::operation_aborted) {
         logger().error("timer error");
         return ;
@@ -67,19 +64,21 @@ protected:
       if(timer_.expiry() > std::chrono::steady_clock::now() ) {
         return ;
       }
+      logger().debug("do timeout process");
       __self->on_timeout();
     };
+    logger().info("setup a timer");
     timer_.expires_after(
       std::chrono::seconds(timeout_)
     );
     timer_.async_wait(
       __asio::bind_executor(
-        read_strand_, std::move(on_timeout)
+        runner_strand_, std::move(on_timeout)
       )
     );
   }
 
-  void async_recv_requests_impl(boost::asio::yield_context& yield) {
+  void async_run_impl(boost::asio::yield_context yield) {
       using request      = __http::request<__http::string_body>;
       // currently we only focus on short message
       // multi-part message is not support
@@ -87,8 +86,7 @@ protected:
       error_code    ec          ;
       request       req         ;
       try {
-        while(true) {
-          // if(writer_msg_queue_.write_available() <= 0) continue;
+        while(!derived()->is_closed()) {
           // derived()->set_timer();
           logger().debug("async_read");
           __http::async_read(derived()->stream(), req_buffer, req, yield[ec]);
@@ -116,33 +114,14 @@ protected:
               return derived()->async_send_response(std::move(response), yield);
             }
           );
-          if(close_) break;
-
-          // TODO: make multi-part message work from here
-          // if(/* is multi-part message */false) {
-          // } else {
-          //   derived()->set_timer();
-          //   __http::async_read(derived()->stream(), req_buffer, req, yield);
-          // }
         }
-        derived()->on_eof(yield);
       } catch(const std::exception& e) {
         logger().error(e.what());
       }
   }
 
-  void async_recv_requests() {
-    // read fiber
-    boost::asio::spawn(read_strand_, [__self = derived(), this](
-      boost::asio::yield_context yield
-    ) {
-      async_recv_requests_impl(yield);
-    });
-  }
-  // template<class Rep>
-  // void async_send_response(Rep response) {
   template<bool isRequest, class Body, class Fields>
-  auto async_send_response(
+  auto async_send_response_impl(
     __http::message<isRequest, Body, Fields>&& response, 
     boost::asio::yield_context yield
   ) {
@@ -160,35 +139,9 @@ protected:
     if(ec)
       return logger().error("send response failed");
     if(close) {
-      close_ = true;
-      //logger().debug("response: do close");
-      //return derived()->on_eof(yield);
-      return ;
+      logger().info("session close");
+      return derived()->on_eof(yield);
     }
-
-    // boost::asio::spawn(
-    //   write_strand_, 
-    //   [
-    //     __self = derived(), this, 
-    //     response = std::move(response)
-    //   ](boost::asio::yield_context yield) mutable {
-    //     error_code ec;
-    //     auto close = response.need_eof();
-    //     __http::serializer<isRequest, Body, Fields> sr{response};
-    //     __http::async_write(__self->stream(), response, yield[ec]);
-    //     pending_req_num_ -= 1;
-    //     if(ec == __asio::error::operation_aborted) {
-    //       logger().debug("response: operation aborted");
-    //       return;
-    //     }
-    //     if(ec)
-    //       return logger().error("send response failed");
-    //     if(close) {
-    //       logger().debug("response: do close");
-    //       return __self->on_eof(yield);
-    //     }
-    //   }
-    // );
   }
 
 
@@ -196,11 +149,8 @@ protected:
   int                             timeout_                ;
   int                             max_pending_req_num_    ;
   __asio::steady_timer            timer_                  ;
-  strand                          read_strand_            ;
-  strand                          write_strand_           ;
+  strand                          runner_strand_          ;
   std::atomic_int                 pending_req_num_        ;
-  bool                            close_                  ;
-
 };
 
 }

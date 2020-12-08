@@ -6,7 +6,8 @@
 namespace pixiu::server_bits::session {
 struct interface {
 public:
-  virtual void async_handle_requests() = 0;
+  virtual void spawn() = 0;
+  virtual bool is_closed() const = 0;
   virtual ~interface() {}
 };
 using interface_ptr = std::shared_ptr<interface>;

@@ -7,7 +7,7 @@ namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 void config_logger() {
     nlohmann::json data;
     auto& loggers = data["loggers"];
-    loggers["tls_http"] = {
+    loggers["https"] = {
       {"level", "debug"}
     };
     loggers["app"] = {
@@ -22,6 +22,9 @@ void config_logger() {
     loggers["request_router"] = {
       {"level", "debug"}
     };
+    loggers["fiber"] = {
+      {"level", "debug"}
+    };
     pixiu::logger::config(data);
 }
 int main(int argc, char* argv[]) {
@@ -31,37 +34,15 @@ int main(int argc, char* argv[]) {
      * make a http server and listen to 8080 port
      */
     auto server = pixiu::make_server();
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     boost::asio::ssl::context ssl_ctx{ssl::context::sslv23};
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     load_server_certificate(ssl_ctx);
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     server.set_tls_context(ssl_ctx);
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     server.get("/", [](const auto& req) -> pixiu::server_bits::response {
       pixiu::logger::get("app").debug("root target: {}", req.target().to_string());
-      // boost::beast::error_code ec;
-      // http::file_body::value_type body;
-      // body.open("../index.html", boost::beast::file_mode::scan, ec);
-      // auto const size = body.size();
-      
-      // http::response<http::file_body> res{
-      //   std::piecewise_construct,
-      //   std::make_tuple(std::move(body)),
-      //   std::make_tuple(http::status::ok, req.version())};
-      // res.content_length(size);
-
-      http::response<http::string_body> rep;
-      std::string str = "hello world";
-      rep.body() = str;
-      rep.content_length(str.size());
-      return pixiu::server_bits::response(std::move(rep));
+      return pixiu::make_response("hello world");
     });
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     server.listen("0.0.0.0", 8080);
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     server.run();
-    pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
   } catch (const std::exception& e) {
     pixiu::logger::get("app").error(e.what());
   }

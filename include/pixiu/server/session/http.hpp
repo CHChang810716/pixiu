@@ -1,46 +1,55 @@
 #pragma once
-#include "http_base_coro.hpp"
+#include "http_base.hpp"
 #include <boost/asio/ip/tcp.hpp>
 #include "interface.hpp"
+#include <pixiu/server/fiber_guard.hpp>
 namespace pixiu::server_bits::session {
 namespace __ip = boost::asio::ip;
 template<class RequestRouter>
-struct plain_http 
+struct http 
 : public http_base<
-  plain_http<RequestRouter>, 
+  http<RequestRouter>, 
   RequestRouter
 > 
 , public std::enable_shared_from_this<
-  plain_http<RequestRouter>
+  http<RequestRouter>
 > 
 , public interface
 {
-friend http_base<plain_http<RequestRouter>, RequestRouter>;
+friend http_base<http<RequestRouter>, RequestRouter>;
 private:
   using tcp_socket        = boost::asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
   using request_router_t  = RequestRouter;
-  using base_http_t       = http_base<plain_http<RequestRouter>, RequestRouter>;
-  static auto& logger() { return logger::get("plain_http"); }
+  using base_http_t       = http_base<http<RequestRouter>, RequestRouter>;
+  static auto& logger() { return logger::get("http"); }
 
 public:
-  plain_http(
+  http(
     __asio::io_context&       ioc,
     tcp_socket                socket,
-    const request_router_t&   request_router,
-    flat_buffer               recv_buffer
+    const request_router_t&   request_router
   )
   : base_http_t         (ioc, request_router)
   , socket_             (std::move(socket))
-  , recv_buffer_        (std::move(recv_buffer))
   {}
 
-  virtual void async_handle_requests() override {
-    base_http_t::async_recv_requests();
+  virtual void spawn() override {
+    boost::asio::spawn(
+      base_http_t::runner_strand_, 
+      [__self = this->derived(), this](boost::asio::yield_context yield) {
+        fiber_guard fg;
+        __self->async_run_impl(yield);
+      }
+    );
   }
 
-  virtual ~plain_http() override {
-    logger().debug("plain_http destroy");
+  virtual bool is_closed() const override {
+    return !socket_.is_open();
+  }
+
+  virtual ~http() override {
+    logger().debug("http destroy");
   }
 
 private:
@@ -49,12 +58,9 @@ private:
     __http::message<isRequest, Body, Fields> msg,
     boost::asio::yield_context yield
   ) {
-    return base_http_t::async_send_response(
+    return base_http_t::async_send_response_impl(
       std::move(msg), yield
     );
-  }
-  void async_recv_request() {
-    return base_http_t::async_recv_request(this->shared_from_this());
   }
   void on_eof(boost::asio::yield_context& yield) {
     boost::system::error_code ec;

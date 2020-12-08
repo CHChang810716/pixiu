@@ -9,11 +9,12 @@
 // #include <boost/asio/ssl.hpp>
 // #include <future_beast/detect_ssl.hpp>
 #include <pixiu/server/session/interface.hpp>
-#include <pixiu/server/session/plain_http.hpp>
-#include <pixiu/server/session/tls_http.hpp>
+#include <pixiu/server/session/http.hpp>
+#include <pixiu/server/session/https.hpp>
 #include <pixiu/server/request_router.hpp>
 #include <boost/coroutine2/all.hpp>
 #include <boost/asio/spawn.hpp>
+#include "fiber_guard.hpp"
 namespace pixiu::server_bits {
 
 template<class IOContextAR, class RequestRouterAR>
@@ -65,6 +66,7 @@ public:
       _self = this->shared_from_this(), this,
       ep = std::move(ep)
     ](boost::asio::yield_context yield){
+      fiber_guard fg;
       error_code ec;
 
       logger().debug("acceptor open");
@@ -82,8 +84,7 @@ public:
         socket_base::max_listen_connections, ec
       );
       error_code_throw(ec, "acceptor listen failed");
-      for(;;) {
-        flat_buffer               recv_buffer ;
+      while(true) {
         tcp_socket                socket      (ioc_);
         logger().debug("async_accept");
         acceptor_.async_accept(socket, yield[ec]);
@@ -92,36 +93,31 @@ public:
           return ;
         }
         logger().debug("session run");
-        auto session = make_session(
-          std::move(recv_buffer),
+        spawn_session(
           std::move(socket)
         );
-        session->async_handle_requests();
       }
     });
   }
-  session_ptr make_session(
-    flat_buffer&& recv_buffer,
+  auto spawn_session(
     tcp_socket&& socket
   ) {
     session_ptr p_session(nullptr);
     if(!ssl_ctx_) {
-      p_session.reset(new session::plain_http<request_router_t>(
+      p_session.reset(new session::http<request_router_t>(
         acceptor_.get_executor().context(),
         std::move(socket),
-        request_router_,
-        std::move(recv_buffer)
+        request_router_
       ));
     } else {
-      p_session.reset(new session::tls_http<request_router_t> (
+      p_session.reset(new session::https<request_router_t> (
         acceptor_.get_executor().context(),
         std::move(socket),
         *ssl_ctx_,
-        request_router_,
-        std::move(recv_buffer)
+        request_router_
       ));
     }
-    return p_session;
+    return p_session->spawn();
   }
   void listen( const std::string& ip, unsigned short port) {
     listen(tcp_endp{ 
