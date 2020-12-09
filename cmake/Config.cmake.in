@@ -1,7 +1,5 @@
 @PACKAGE_INIT@
 
-find_package(Beast CONFIG REQUIRED)
-
 find_package(range-v3 CONFIG REQUIRED)
 
 find_package(spdlog CONFIG REQUIRED)
