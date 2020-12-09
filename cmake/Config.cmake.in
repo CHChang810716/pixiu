@@ -17,7 +17,7 @@ find_package(Boost
     CONFIG
     REQUIRED
 )
-if(WIN32)
+if(MINGW)
     set(H_CMAKE_MODUE_PATH ${H_CMAKE_MODUE_PATH})
     unset(CMAKE_MODULE_PATH)
     find_package(OpenSSL REQUIRED)
@@ -33,6 +33,14 @@ foreach(tmp_i ${tmp_include_dirs})
     list(APPEND AKT_VSCODE_C_CPP_INCLUDES "\"${tmp_i}\"")
 endforeach()
 unset(tmp_include_dirs)
+foreach(tmp_lib ${OPENSSL_LIBRARIES})
+    get_filename_component(tmp_lib_dir "${tmp_lib}" DIRECTORY)
+    get_filename_component(tmp_lib_inst_dir "${tmp_lib_dir}" DIRECTORY)
+    list(APPEND BUNDLE_RT_DIRS ${tmp_lib_dir})
+    list(APPEND BUNDLE_RT_DIRS ${tmp_lib_inst_dir}/bin)
+    unset(tmp_lib_dir)
+    unset(tmp_lib)
+endforeach()
 
 find_package(Threads REQUIRED)
 
