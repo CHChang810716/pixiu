@@ -9,7 +9,7 @@ set(
 )
 HunterGate(
     URL "https://github.com/CHChang810716/hunter.git"
-    SHA1 b25ffcc2b6e251eec29540a02f71d0f9ab223ca8
+    SHA1 950960e8f1d67f7bc64155417f4a8e8ccebbad64
     FILEPATH ${CMAKE_CURRENT_LIST_DIR}/cmake/hunter_config.cmake
 )
 
@@ -21,8 +21,9 @@ project(pixiu
 hunter_add_package(Arkitekto)
 find_package(Arkitekto CONFIG REQUIRED)
 
-option(BUILD_TEST   "Build project with test"   OFF)
-option(INSTALL_DEPS "Install dependensies"      OFF)
+option(BUILD_TEST       "Build project with test"       OFF)
+option(INSTALL_DEPS     "Install dependensies"          OFF)
+option(BUILD_EXAMPLE    "Build project with example"    OFF)
 akt_show_var(CMAKE_PREFIX_PATH)
 include(cmake/toolchain_conf.cmake)
 include(cmake/packages.cmake)

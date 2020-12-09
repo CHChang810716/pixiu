@@ -2,9 +2,6 @@ if(BUILD_TEST)
     hunter_add_package(GTest)
     find_package(GTest CONFIG REQUIRED)
 endif()
-hunter_add_package(Beast)
-find_package(Beast CONFIG REQUIRED)
-
 hunter_add_package(range-v3)
 find_package(range-v3 CONFIG REQUIRED)
 
@@ -32,7 +29,7 @@ find_package(Boost
     CONFIG
     REQUIRED
 )
-if(WIN32)
+if(MINGW)
     set(H_CMAKE_MODUE_PATH ${H_CMAKE_MODUE_PATH})
     unset(CMAKE_MODULE_PATH)
     find_package(OpenSSL REQUIRED)
