@@ -7,6 +7,8 @@
 #include "error/all.hpp"
 #include <exception>
 #include "params.hpp"
+#include <pixiu/logger.hpp>
+
 namespace pixiu::server_bits {
 
 namespace __http    = boost::beast::http  ;
@@ -33,7 +35,7 @@ struct request_router {
   using target_request_mapper = handler_mapper<head_handler, get_handler>;
 
   static auto& logger() {
-    return pixiu::logger::get("request_router");
+    return pixiu::logger::get("router");
   }
   static response generic_error_response(const request& req, const error::base& err) {
     return err.create_response(req);
@@ -84,6 +86,7 @@ struct request_router {
   auto search_handler(const boost::beast::string_view& target) const {
     auto s_target = target.to_string();
     for(auto&& [pattern, on_tr] : on_target_requests_) {
+      logger().debug("search pattern: {}", pattern);
       if(std::regex_match(s_target, std::regex(pattern))) {
         return on_tr;
       }
