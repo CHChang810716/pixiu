@@ -31,8 +31,9 @@ struct request_router {
   using serv_err_handler     = handler<Args...>;
 
   template<class... Handlers>
-  using handler_mapper        = std::map<std::string, std::tuple<Handlers...>>;
+  using handler_mapper        = std::vector<std::tuple<std::regex, Handlers...>>;
   using target_request_mapper = handler_mapper<head_handler, get_handler>;
+  using target_request_index  = std::map<std::string, std::size_t>;
 
   static auto& logger() {
     return pixiu::logger::get("router");
@@ -50,8 +51,17 @@ struct request_router {
     };
   }
   void get(const std::string& target_pattern, get_handler&& gh) {
-    std::get<1>(on_target_requests_[target_pattern]) = 
-      std::move(gh);
+    auto iter = pattern_index_.find(target_pattern);
+    if(iter == pattern_index_.end()) {
+      pattern_index_[target_pattern] = on_target_requests_.size();
+      on_target_requests_.emplace_back(
+        std::regex(target_pattern.c_str()), 
+        head_handler(), 
+        std::move(gh)
+      );
+    } else {
+      std::get<2>(on_target_requests_[iter->second]) = gh;
+    }
   }
   template<class... Type, class Func>
   void get(
@@ -68,8 +78,17 @@ struct request_router {
 
   }
   void head(const std::string& target_pattern, head_handler&& hh) {
-    std::get<0>(on_target_requests_[target_pattern]) = 
-      std::move(hh);
+    auto iter = pattern_index_.find(target_pattern);
+    if(iter == pattern_index_.end()) {
+      pattern_index_[target_pattern] = on_target_requests_.size();
+      on_target_requests_.emplace_back(
+        std::regex(target_pattern.c_str()), 
+        std::move(hh), 
+        get_handler()
+      );
+    } else {
+      std::get<1>(on_target_requests_[iter->second]) = hh;
+    }
   }
   void on_err_unknown_method(err_handler<>&& eh) {
     on_err_unknown_method_ = eh;
@@ -85,10 +104,10 @@ struct request_router {
   }
   auto search_handler(const boost::beast::string_view& target) const {
     auto s_target = target.to_string();
-    for(auto&& [pattern, on_tr] : on_target_requests_) {
-      logger().debug("search pattern: {}", pattern);
+    for(auto&& [pattern, head, get] : on_target_requests_) {
+      // logger().debug("search pattern: {}", pattern.str());
       if(std::regex_match(s_target, std::regex(pattern))) {
-        return on_tr;
+        return std::make_tuple(head, get);
       }
     }
     throw error::target_not_found(s_target);
@@ -188,7 +207,7 @@ private:
   err_handler<>                 on_err_target_not_found_    ;
   serv_err_handler<std::string> on_err_server_error_        ;
   target_request_mapper         on_target_requests_         ;
-
+  target_request_index          pattern_index_              ;
 };
 
 }

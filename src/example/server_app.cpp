@@ -37,6 +37,10 @@ int main(int argc, char* argv[]) {
     pixiu::logger::get("app").info("{}:{}", __FILE__, __LINE__);
     server.get("/", [](const auto& req) -> pixiu::server_bits::response {
       pixiu::logger::get("app").debug("root target: {}", req.target().to_string());
+      return pixiu::make_response("root");
+    });
+    server.get("/.*", [](const auto& req) -> pixiu::server_bits::response {
+      pixiu::logger::get("app").debug("root target: {}", req.target().to_string());
       return pixiu::make_response("hello world");
     });
     server.listen("0.0.0.0", 8080);
