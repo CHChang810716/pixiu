@@ -13,9 +13,12 @@ struct server
   using this_t            = server<IOContextAR, RequestRouterAR>;
   using tcp               = boost::asio::ip::tcp;
   using tcp_endp          = tcp::endpoint;
-  template<class Func>
-  this_t& get(const std::string& target, Func&& handle) {
-    impl_->request_router().get(target, std::forward<Func>(handle));
+
+  template<class... Args>
+  this_t& get(
+    Args&&... args
+  ) {
+    impl_->request_router().get(std::forward<Args>(args)...);
     return *this;
   }
 
