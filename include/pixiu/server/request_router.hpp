@@ -49,6 +49,10 @@ struct request_router {
       error::server_error e(what);
       return e.create_response(req);
     };
+    enable_session_ = false;
+  }
+  void use_session(bool u) {
+    enable_session_ = u;
   }
   void get(const std::string& target_pattern, get_handler&& gh) {
     auto iter = pattern_index_.find(target_pattern);
@@ -158,6 +162,30 @@ struct request_router {
     }
   }
 private:
+  template<class T>
+  void handle_session(__http::response<T>& rep, const request& req) const {
+    if(!enable_session_) return;
+    auto iter =  req.find(__http::field::set_cookie);
+    if(iter == req.end()) {
+    } else {
+      auto cookie_str = iter->value();
+      // const char* j = cookie_str.data();
+      // for(const char* i = cookie_str().find(";"); 
+      //   i < cookie_str.end(); 
+      //   i = cookie_str.find(";")
+      // ) {
+      //   std::string_view entry{j, i};
+      //   auto as_s = entry.find("=");
+      //   std::string_view key{j, as_s};
+      //   std::string_view value{as_s + 1, i};
+      //   if(key == "session_id") {
+      //     rep.set(__http::field::cookie, entry);
+      //   }
+      // }
+    }
+  }
+  void handle_cookie(response& rep, const request& req) const {
+  }
   void generic_header_config(response& rep, const request& req) const {
     rep.apply([&req](auto&& inter_rep){
       if(inter_rep.result() == __http::status::unknown) {
@@ -208,6 +236,7 @@ private:
   serv_err_handler<std::string> on_err_server_error_        ;
   target_request_mapper         on_target_requests_         ;
   target_request_index          pattern_index_              ;
+  bool                          enable_session_             ;
 };
 
 }
