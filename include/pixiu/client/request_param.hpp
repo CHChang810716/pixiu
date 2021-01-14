@@ -8,7 +8,7 @@
 namespace pixiu::client_bits {
 
 struct request_param {
-    boost::string_view          target  ;
+    std::string_view            target  ;
     boost::beast::http::verb    method  ;
     nlohmann::json              param   ;
     auto make_request(
@@ -23,7 +23,7 @@ struct request_param {
         request.method(method);
         request.set(http::field::host, host);
         request.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        std::string uri = target.to_string();
+        std::string uri{target.begin(), target.end()};
         char spliter = '?';
         for(auto itr = param.begin(); itr != param.end(); itr++) {
             uri += spliter;

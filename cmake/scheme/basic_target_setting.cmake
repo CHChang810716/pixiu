@@ -16,4 +16,7 @@ endif()
 if(MINGW)
     target_compile_options(${AKT_TARGET} PUBLIC -Wa,-mbig-obj)
 endif()
-target_compile_definitions(${AKT_TARGET} PUBLIC BOOST_COROUTINES_NO_DEPRECATION_WARNING)
+target_compile_definitions(${AKT_TARGET} PUBLIC 
+    BOOST_COROUTINES_NO_DEPRECATION_WARNING
+    BOOST_BEAST_USE_STD_STRING_VIEW
+)

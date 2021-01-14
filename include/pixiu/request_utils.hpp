@@ -8,7 +8,7 @@ constexpr struct MakeRequest {
   auto operator()(
     const boost::beast::http::verb method,
     const std::string& host,
-    boost::string_view target, 
+    const std::string_view& target, 
     int version,
     nlohmann::json param
   ) const {

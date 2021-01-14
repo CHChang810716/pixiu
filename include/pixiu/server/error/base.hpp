@@ -3,6 +3,7 @@
 #include <pixiu/server/response.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
+#include <pixiu/server/request.hpp>
 namespace pixiu::server_bits::error {
 
 namespace __http    = boost::beast::http  ;
@@ -10,7 +11,7 @@ namespace __beast   = boost::beast        ;
 
 struct base : public std::runtime_error 
 {
-  using request = __http::request<__http::string_body>;
+  using request = pixiu::server_bits::request<__http::string_body>;
   using __base = std::runtime_error;
   using __base::__base;
   virtual response create_response(

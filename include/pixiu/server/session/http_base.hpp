@@ -24,6 +24,7 @@ private:
   using tcp_socket        = __asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
   using request_router_t  = RequestRouter;
+  using session_storage   = typename request_router_t::session_storage;
   using strand            = __asio::io_context::strand;
   static auto& logger() { return logger::get("http_base"); }
 public:
@@ -35,7 +36,7 @@ public:
   , timeout_            (15)
   , max_pending_req_num_(16)
   , timer_              (ioc)
-  , runner_strand_        (ioc)
+  , runner_strand_      (ioc)
   , pending_req_num_    (0)
   {}
   void timeout(int sec) {
@@ -79,12 +80,11 @@ protected:
   }
 
   void async_run_impl(boost::asio::yield_context yield) {
-      using request      = __http::request<__http::string_body>;
       // currently we only focus on short message
       // multi-part message is not support
-      flat_buffer&  req_buffer = derived()->recv_buffer();
-      error_code    ec          ;
-      request       req         ;
+      flat_buffer&      req_buffer = derived()->recv_buffer();
+      error_code        ec          ;
+      session_storage   req         ;
       try {
         while(!derived()->is_closed()) {
           // derived()->set_timer();

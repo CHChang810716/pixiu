@@ -10,6 +10,7 @@
 #include <pixiu/logger.hpp>
 #include <pixiu/utils.hpp>
 #include <pixiu/server/request.hpp>
+#include <random>
 
 namespace pixiu::server_bits {
 
@@ -17,10 +18,62 @@ namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
 namespace __asio    = boost::asio         ;
 
-struct request_router {
+struct session_storage {
+  using request = pixiu::server_bits::request<__http::string_body>;
+  nlohmann::json& session() {
+    if(!sid.empty()) {
+      return g_session_data()[std::string{sid.begin(), sid.end()}];
+    }
+    if(req.has_session_id()) {
+      sid = req.session_id();
+      return g_session_data()[std::string{sid.begin(), sid.end()}];
+    }
+    // TODO: better session id generator
+    sid = random_str(16);
+    return g_session_data()[std::string{sid.begin(), sid.end()}];
 
-  using request               = pixiu::server_bits::request<__http::string_body>;
-  using session_storage       = request;
+  }
+  static nlohmann::json& g_session_data() {
+    static nlohmann::json data;
+    return data;
+  }
+  request req;
+  std::string sid;
+private:
+  static std::string __random_char_pool() {
+    std::string str;
+    for(char c = 'a'; c < 'z'; c++) {
+      str.push_back(c);
+    }
+    for(char c = 'A'; c < 'Z'; c++) {
+      str.push_back(c);
+    }
+    for(char c = '0'; c < '9'; c++) {
+      str.push_back(c);
+    }
+    return str;
+  }
+  static std::string& random_char_pool() {
+    static std::string data = __random_char_pool();
+    return data;
+  }
+  static std::string random_str(int len) {
+    static auto& char_pool = random_char_pool();
+    static std::default_random_engine rng(std::random_device{}());
+    static std::uniform_int_distribution<> dist(0, char_pool.size() - 1);
+    std::string res;
+    res.resize(len);
+    for(int i = 0; i < len; i ++) {
+      res[i] = char_pool[dist(rng)];
+    }
+    return res;
+  }
+};
+
+struct session_request_router {
+
+  using session_storage       = pixiu::server_bits::session_storage;
+  using request               = session_storage::request;
 
   template<class... Args>
   using handler               = std::function<response(const request&, Args... args)>;
@@ -44,7 +97,7 @@ struct request_router {
   static response generic_error_response(const request& req, const error::base& err) {
     return err.create_response(req);
   }
-  request_router() {
+  session_request_router() {
     on_err_unknown_method_      = generic_error_response;
     on_err_illegal_target_      = generic_error_response;
     on_err_target_not_found_    = generic_error_response;
