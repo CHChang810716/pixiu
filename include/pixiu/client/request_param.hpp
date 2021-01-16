@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <boost/beast/version.hpp>
 #include <fmt/format.h>
+#include <pixiu/request.hpp>
 namespace pixiu::client_bits {
 
 struct request_param {
@@ -16,9 +17,7 @@ struct request_param {
         int version
     ) const {
         namespace http = boost::beast::http;
-        http::request<
-            http::string_body
-        > request;
+        request<http::string_body> request;
         request.version(version);
         request.method(method);
         request.set(http::field::host, host);

@@ -11,7 +11,6 @@
 #include <pixiu/server/session/interface.hpp>
 #include <pixiu/server/session/http.hpp>
 #include <pixiu/server/session/https.hpp>
-#include <pixiu/server/request_router.hpp>
 #include <boost/coroutine2/all.hpp>
 #include <boost/asio/spawn.hpp>
 #include "fiber_guard.hpp"

@@ -13,26 +13,28 @@ struct request : public boost::beast::http::request<Body, Fields> {
 
   request() = default;
 
-  template<class... Args>
-  request(Args&&... args)
-  : base_t(std::forward<Args>(args)...)
-  , cm_(handle_cookie(*this))
-  {}
+  // template<class... Args>
+  // request(Args&&... args)
+  // : base_t(std::forward<Args>(args)...)
+  // // , cm_(handle_cookie(static_cast<base_t&>(*this)))
+  // {}
 
   request(request&& o)
   : base_t(std::move(o))
-  , cm_(handle_cookie(*this))
+  // , cm_(handle_cookie(static_cast<base_t&>(*this)))
   {}
 
   request& operator=(const request& r)  {
-    static_cast<base_t&>(*this) = r;
-    cm_ = handle_cookie(*this);
+    auto& base = static_cast<base_t&>(*this);
+    base = r;
+    cm_ = handle_cookie(base);
     return *this;
   }
 
   request& operator=(request&& r) {
-    static_cast<base_t&>(*this) = std::move(r);
-    cm_ = handle_cookie(*this);
+    auto& base = static_cast<base_t&>(*this);
+    base = std::move(r);
+    cm_ = handle_cookie(base);
     return *this;
 
   }

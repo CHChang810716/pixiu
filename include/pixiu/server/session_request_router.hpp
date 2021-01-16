@@ -76,9 +76,9 @@ struct session_request_router {
   using request               = session_storage::request;
 
   template<class... Args>
-  using handler               = std::function<response(const request&, Args... args)>;
+  using handler               = std::function<response(const session_storage&, Args... args)>;
 
-  using head_handler          = std::function<void(response&, const request&)>;
+  using head_handler          = std::function<void(response&, const session_storage&)>;
   using get_handler           = handler<>;
 
   template<class... Args>
@@ -94,16 +94,16 @@ struct session_request_router {
   static auto& logger() {
     return pixiu::logger::get("router");
   }
-  static response generic_error_response(const request& req, const error::base& err) {
-    return err.create_response(req);
+  static response generic_error_response(const session_storage& sn, const error::base& err) {
+    return err.create_response(sn.req);
   }
   session_request_router() {
     on_err_unknown_method_      = generic_error_response;
     on_err_illegal_target_      = generic_error_response;
     on_err_target_not_found_    = generic_error_response;
-    on_err_server_error_        = [](const request& req, std::string what) {
+    on_err_server_error_        = [](const session_storage& sn, std::string what) {
       error::server_error e(what);
-      return e.create_response(req);
+      return e.create_response(sn.req);
     };
   }
   void get(const std::string& target_pattern, get_handler&& gh) {
@@ -125,10 +125,10 @@ struct session_request_router {
     params<Type...>&&     param_types, 
     Func&&                func
   ) {
-    get(target, [p_t = std::move(param_types), func = std::move(func)](const auto& req) -> response {
-      auto params_tuple = p_t.parse(req.target());
-      return boost::hana::unpack(params_tuple, [&req, &func](auto&&... args){
-        return func(req, std::move(args)...);
+    get(target, [p_t = std::move(param_types), func = std::move(func)](const auto& session) -> response {
+      auto params_tuple = p_t.parse(session.req.target());
+      return boost::hana::unpack(params_tuple, [&session, &func](auto&&... args){
+        return func(session, std::move(args)...);
       });
     });
 
@@ -170,9 +170,10 @@ struct session_request_router {
   }
   template<class Func>
   auto operator()(
-    request  req, 
-    Func&&   send
+    const session_storage&  session, 
+    Func&&                  send
   ) const {
+    auto& req = session.req;
     try {
       // Request path must be absolute and not contain "..".
       auto target = req.target();
@@ -194,13 +195,13 @@ struct session_request_router {
       switch(req.method()) {
         case __http::verb::head: 
           return method_case_head(
-            std::move(req), 
+            session, 
             std::move(send),
             handlers
           );
         case __http::verb::get:
           return method_case_get(
-            std::move(req), 
+            session, 
             std::move(send),
             handlers
           );
@@ -211,13 +212,13 @@ struct session_request_router {
         }
       };
     } catch (const error::illegal_target& err) {
-      on_err_illegal_target_(req, err).write(send);
+      on_err_illegal_target_(session, err).write(send);
     } catch (const error::target_not_found& err) {
-      on_err_target_not_found_(req, err).write(send);
+      on_err_target_not_found_(session, err).write(send);
     } catch (const error::unknown_method& err) {
-      on_err_unknown_method_(req, err).write(send);
+      on_err_unknown_method_(session, err).write(send);
     } catch (const std::exception& e) {
-      on_err_server_error_(req, e.what()).write(send);
+      on_err_server_error_(session, e.what()).write(send);
     }
   }
 private:
@@ -235,23 +236,23 @@ private:
     });
   }
   template<class Func, class HandlerTuple>
-  auto method_case_head(request req, Func&& send, HandlerTuple& handlers) const {
+  auto method_case_head(const session_storage& sn, Func&& send, HandlerTuple& handlers) const {
     logger().debug("head request");
     auto [head_h, get_h] = handlers;
     response rep;
     rep.emplace<__http::response<__http::empty_body>>();
-    generic_header_config(rep, req);
-    head_h(rep, std::move(req));
+    generic_header_config(rep, sn.req);
+    head_h(rep, sn);
     return rep.write(send);
   }
   template<class Func, class HandlerTuple>
-  auto method_case_get(request req, Func&& send, HandlerTuple& handlers) const {
+  auto method_case_get(const session_storage& sn, Func&& send, HandlerTuple& handlers) const {
     logger().debug("get request");
     auto [head_h, get_h] = handlers;
-    auto rep = get_h(req);
-    generic_header_config(rep, req);
+    auto rep = get_h(sn);
+    generic_header_config(rep, sn.req);
     if(head_h) {
-      head_h(rep, std::move(req));
+      head_h(rep, sn);
     } else {
       rep.apply([](auto& inter_rep){
         if(!inter_rep.payload_size()) {

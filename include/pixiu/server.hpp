@@ -1,11 +1,12 @@
 #pragma once
 #include "server/core.hpp"
+#include <pixiu/server/request_router.hpp>
+#include <pixiu/server/session_request_router.hpp>
+
 namespace pixiu {
 template<class IOContextAR, class RequestRouterAR>
 struct server
 {
-  // template<class T0, class T1>
-  // friend server<T0, T1> make_server(T0&,T1&);
   friend struct server_maker;
 
   using core              = server_bits::core<IOContextAR, RequestRouterAR>;
@@ -57,7 +58,7 @@ constexpr struct server_maker {
       ioc, std::forward<RequestRouter>(rr)));
     return res;
   }
-  template<class RequestRouter = server_bits::request_router>
+  template<class RequestRouter = server_bits::session_request_router>
   auto operator()(RequestRouter&& rr = server_bits::request_router()) const {
     using server_t = server<boost::asio::io_context, RequestRouter>;
     server_t res;

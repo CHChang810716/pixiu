@@ -84,12 +84,12 @@ protected:
       // multi-part message is not support
       flat_buffer&      req_buffer = derived()->recv_buffer();
       error_code        ec          ;
-      session_storage   req         ;
+      session_storage   session     ;
       try {
         while(!derived()->is_closed()) {
           // derived()->set_timer();
           logger().debug("async_read");
-          __http::async_read(derived()->stream(), req_buffer, req, yield[ec]);
+          __http::async_read(derived()->stream(), req_buffer, session.req, yield[ec]);
           pending_req_num_ += 1;
           logger().debug("request received");
           logger().debug("{}:{}, {}", __FILE__, __LINE__, ec.message());
@@ -108,7 +108,8 @@ protected:
           logger().debug("request start process");
 
           request_router_->operator()(
-            std::move(req), 
+            // std::move(session), 
+            session, 
             [this, yield] (auto response) mutable {
               logger().debug("response created");
               return derived()->async_send_response(std::move(response), yield);
