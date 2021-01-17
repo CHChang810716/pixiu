@@ -1,8 +1,12 @@
 {
     "cmake.configureArgs": [
-        "-DCMAKE_INSTALL_PREFIX=../stage",
         "-Wno-dev",
-        "-DBUILD_TEST=ON"
     ],
+    "cmake.configureSettings": {
+        "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/stage",
+        "CMAKE_SKIP_INSTALL_RPATH": "ON",
+        "BUILD_TEST": "ON"
+    },
+    "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureOnOpen": true
 }
