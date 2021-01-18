@@ -47,6 +47,20 @@ struct request : public boost::beast::http::request<Body, Fields> {
     return cm_.find(session_id_key) != cm_.end();
   }
 
+  // std::string cookie_str() const {
+  //   std::string res;
+  //   bool first = true;
+  //   for(auto&& [k, v] : cm_) {
+  //     if(first) {
+  //       first = false;
+  //     } else {
+  //       res.push_back(';');
+  //     }
+  //     res.append(fmt::format("{}={}"));
+  //   }
+  //   return res;
+  // }
+
 private:
   static cookie_map handle_cookie(const base_t& req) {
     auto iter =  req.find(boost::beast::http::field::set_cookie);

@@ -92,7 +92,6 @@ protected:
           __http::async_read(derived()->stream(), req_buffer, session.req, yield[ec]);
           pending_req_num_ += 1;
           logger().debug("request received");
-          logger().debug("{}:{}, {}", __FILE__, __LINE__, ec.message());
           // timer close socket
           if(ec == __asio::error::operation_aborted) {
             logger().debug("request operation abort");

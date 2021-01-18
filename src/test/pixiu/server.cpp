@@ -17,15 +17,15 @@ protected:
     // loggers["http"] = {
     //   {"level", "debug"}
     // };
-    // loggers["http_base"] = {
-    //   {"level", "debug"}
-    // };
-    // loggers["core"] = {
-    //   {"level", "debug"}
-    // };
-    // loggers["request_router"] = {
-    //   {"level", "debug"}
-    // };
+    loggers["http_base"] = {
+      {"level", "debug"}
+    };
+    loggers["core"] = {
+      {"level", "debug"}
+    };
+    loggers["request_router"] = {
+      {"level", "debug"}
+    };
     pixiu::logger::config(data);
   }
 };
@@ -111,6 +111,13 @@ TEST_F(server_test, manual_request_router) {
       return pixiu::make_response(std::to_string(a + b));
     }
   );
+  router.get("/session_id", 
+    [](const auto& session) {
+      session.session();
+      return pixiu::make_response(session.sid);
+    }
+  );
+
   auto server = pixiu::make_server(router);
   server.listen("0.0.0.0", 8080);
 
@@ -125,6 +132,17 @@ TEST_F(server_test, manual_request_router) {
       }, 
       [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
         test_actual = buffers_to_string(reps.at(0).body().data());
+      }
+    );
+    client.async_read(
+      "localhost", "8080", 
+      11, {
+        {"/session_id", http::verb::get}
+      }, 
+      [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
+        std::cout << reps.at(0) << '\n';
+        // auto str = buffers_to_string(reps.at(0).body().data());
+        // std::cout << str << '\n';
       }
     );
   });

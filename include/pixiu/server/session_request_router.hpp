@@ -20,26 +20,33 @@ namespace __asio    = boost::asio         ;
 
 struct session_storage {
   using request = pixiu::server_bits::request<__http::string_body>;
-  nlohmann::json& session() {
+  nlohmann::json& session() const {
     if(!sid.empty()) {
       return g_session_data()[std::string{sid.begin(), sid.end()}];
     }
     if(req.has_session_id()) {
-      sid = req.session_id();
+      const_cast<std::string&>(sid) = req.session_id();
       return g_session_data()[std::string{sid.begin(), sid.end()}];
     }
-    // TODO: better session id generator
-    sid = random_str(16);
+    auto& g_s = g_session_data();
+
+    while(true) {
+      auto _sid = random_str(16);
+      if(g_s.find(_sid) == g_s.end()) {
+        const_cast<std::string&>(sid) = _sid;
+        break;
+      }
+    }
     return g_session_data()[std::string{sid.begin(), sid.end()}];
 
-  }
-  static nlohmann::json& g_session_data() {
-    static nlohmann::json data;
-    return data;
   }
   request req;
   std::string sid;
 private:
+  static nlohmann::json& g_session_data() {
+    static nlohmann::json data;
+    return data;
+  }
   static std::string __random_char_pool() {
     std::string str;
     for(char c = 'a'; c < 'z'; c++) {
@@ -74,6 +81,7 @@ struct session_request_router {
 
   using session_storage       = pixiu::server_bits::session_storage;
   using request               = session_storage::request;
+  static constexpr auto session_id_key = request::session_id_key;
 
   template<class... Args>
   using handler               = std::function<response(const session_storage&, Args... args)>;
@@ -222,8 +230,10 @@ struct session_request_router {
     }
   }
 private:
-  void generic_header_config(response& rep, const request& req) const {
-    rep.apply([&req](auto&& inter_rep){
+  void generic_header_config(response& rep, const session_storage& sn) const {
+    auto& req = sn.req;
+    sn.session();
+    rep.apply([&req, &sn](auto&& inter_rep){
       if(inter_rep.result() == __http::status::unknown) {
         inter_rep.result(__http::status::ok);
       }
@@ -233,6 +243,9 @@ private:
         inter_rep.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
       }
       inter_rep.keep_alive(req.keep_alive());
+      inter_rep.set(__http::field::set_cookie, 
+        fmt::format("{}={}", session_id_key, sn.sid)
+      );
     });
   }
   template<class Func, class HandlerTuple>
@@ -241,7 +254,7 @@ private:
     auto [head_h, get_h] = handlers;
     response rep;
     rep.emplace<__http::response<__http::empty_body>>();
-    generic_header_config(rep, sn.req);
+    generic_header_config(rep, sn);
     head_h(rep, sn);
     return rep.write(send);
   }
@@ -250,7 +263,7 @@ private:
     logger().debug("get request");
     auto [head_h, get_h] = handlers;
     auto rep = get_h(sn);
-    generic_header_config(rep, sn.req);
+    generic_header_config(rep, sn);
     if(head_h) {
       head_h(rep, sn);
     } else {
