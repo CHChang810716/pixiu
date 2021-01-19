@@ -199,6 +199,7 @@ struct session_request_router {
       auto target_without_query = target.substr(0, query_start);
       auto handlers = search_handler(target_without_query);
 
+      session.session();
       // Respond to HEAD request
       switch(req.method()) {
         case __http::verb::head: 
@@ -232,7 +233,6 @@ struct session_request_router {
 private:
   void generic_header_config(response& rep, const session_storage& sn) const {
     auto& req = sn.req;
-    sn.session();
     rep.apply([&req, &sn](auto&& inter_rep){
       if(inter_rep.result() == __http::status::unknown) {
         inter_rep.result(__http::status::ok);

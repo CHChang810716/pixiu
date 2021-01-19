@@ -78,30 +78,6 @@ TEST_F(server_test, router_call) {
     }
   });
 }
-// TEST_F(server_test, convenient_use) {
-//   std::string test_actual;
-// 
-//   auto server = pixiu::make_server();
-//   server.get("/", [](const auto& req) -> pixiu::server_bits::response {
-//     http::response<http::string_body> rep;
-//     rep.body() = "hello world";
-//     return pixiu::server_bits::response(rep);
-//   });
-//   server.listen("0.0.0.0", 8080);
-// 
-//   client_run(server, [&test_actual](auto& client){
-//     client.async_read(
-//       "localhost", "8080", 
-//       11, {
-//         {"/", http::verb::get, {} }
-//       }, 
-//       [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
-//         test_actual = buffers_to_string(reps.at(0).body().data());
-//       }
-//     );
-//   });
-//   EXPECT_EQ(test_actual, "hello world");
-// }
 TEST_F(server_test, manual_request_router) {
   std::string test_actual;
 
@@ -113,7 +89,6 @@ TEST_F(server_test, manual_request_router) {
   );
   router.get("/session_id", 
     [](const auto& session) {
-      session.session();
       return pixiu::make_response(session.sid);
     }
   );
@@ -132,6 +107,7 @@ TEST_F(server_test, manual_request_router) {
       }, 
       [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
         test_actual = buffers_to_string(reps.at(0).body().data());
+        EXPECT_LT(std::abs(std::stod(test_actual) - 14.4), 0.01);
       }
     );
     client.async_read(
@@ -140,26 +116,24 @@ TEST_F(server_test, manual_request_router) {
         {"/session_id", http::verb::get}
       }, 
       [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
+        std::cout << reps.at(0) << std::endl;
         auto str = buffers_to_string(reps.at(0).body().data());
         auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
-        std::cout << set_cookie << std::endl;
         EXPECT_GT(str.size(), 0);
         EXPECT_GT(set_cookie.size(), 0);
       }
     );
-    auto req = pixiu::make_request(
-      http::verb::get,
-      "localhost:8080","/session_id", 
-      11, {}
-    );
-    req.set(http::field::cookie, "pixiu_session_id:qsefthuk90");
     client.async_read(
       "localhost", "8080", 
-      11, {req}, 
+      11, {
+        {"/session_id", http::verb::get}
+      }, 
       [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
         std::cout << reps.at(0) << std::endl;
+      },
+      [](auto&& req) {
+        req.set(http::field::cookie, "pixiu_session_id=qsefthuk90");
       }
     );
   });
-  EXPECT_LT(std::abs(std::stod(test_actual) - 14.4), 0.01);
 }

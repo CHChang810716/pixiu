@@ -21,7 +21,7 @@ struct request : public boost::beast::http::request<Body, Fields> {
 
   request(request&& o)
   : base_t(std::move(o))
-  // , cm_(handle_cookie(static_cast<base_t&>(*this)))
+  , cm_(handle_cookie(static_cast<base_t&>(*this)))
   {}
 
   request& operator=(const request& r)  {
@@ -60,10 +60,13 @@ struct request : public boost::beast::http::request<Body, Fields> {
   //   }
   //   return res;
   // }
+  void build_ext() {
+    cm_ = handle_cookie(*this);
+  }
 
 private:
   static cookie_map handle_cookie(const base_t& req) {
-    auto iter =  req.find(boost::beast::http::field::set_cookie);
+    auto iter =  req.find(boost::beast::http::field::cookie);
     cookie_map cm;
     if(iter != req.end()) {
       auto cookie_str = iter->value();

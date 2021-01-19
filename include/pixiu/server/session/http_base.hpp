@@ -90,6 +90,7 @@ protected:
           // derived()->set_timer();
           logger().debug("async_read");
           __http::async_read(derived()->stream(), req_buffer, session.req, yield[ec]);
+          session.req.build_ext();
           pending_req_num_ += 1;
           logger().debug("request received");
           // timer close socket

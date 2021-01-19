@@ -20,7 +20,21 @@ struct client {
       CompletionToken&& token
   ) {
     return impl_->async_read(host, port, version, std::move(req_vec), 
-      std::forward<CompletionToken>(token));
+      std::forward<CompletionToken>(token), [](auto&& req){});
+  }
+  template<class CompletionToken, class ReqProc>
+  auto async_read(
+      const std::string& host,
+      const std::string& port,
+      int version,
+      std::vector<request> req_vec,
+      CompletionToken&& token,
+      ReqProc&& req_proc
+  ) {
+    return impl_->async_read(host, port, version, std::move(req_vec), 
+      std::forward<CompletionToken>(token), 
+      std::forward<ReqProc>(req_proc)
+    );
   }
   this_t& run() { impl_->run(); }
 

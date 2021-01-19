@@ -25,22 +25,24 @@ protected:
         return pixiu::logger::get("client");
     }
 public:
-    using tcp = boost::asio::ip::tcp;
-    using error_code   = boost::system::error_code;
-    using this_t = core<IOContextAR>;
+    using tcp           = boost::asio::ip::tcp;
+    using error_code    = boost::system::error_code;
+    using this_t        = core<IOContextAR>;
+    
     core(IOContextAR& ioc)
     : ioc_(ioc)
     {}
     core()
     : ioc_()
     {}
-    template<class CompletionToken>
+    template<class CompletionToken, class ReqProc>
     auto async_read(
         const std::string& host,
         const std::string& port,
         int version,
         std::vector<request_param> req_vec,
-        CompletionToken&& token
+        CompletionToken&& token,
+        ReqProc&& req_proc
     ) {
         namespace http = boost::beast::http;
         using Sig = void(error_code, responses);
@@ -52,7 +54,7 @@ public:
             req_vec = std::move(req_vec),
             this, __self = this->shared_from_this(),
             host, port, version,
-            handler
+            handler, req_proc = std::move(req_proc)
         ](boost::asio::yield_context yield){
             boost::system::error_code ec;
             tcp::resolver   resolver    {ioc_};
@@ -77,6 +79,7 @@ public:
 
             for(auto& req_param : req_vec) {
                 auto req = req_param.make_request(host, version);
+                req_proc(req);
                 http::async_write(socket, req, yield[ec]);
                 if(ec) {
                     logger().error("request failed");
@@ -99,6 +102,7 @@ public:
         });
         return result.get();
     }
+    
     void run() {ioc_.run();}
 
 protected:
