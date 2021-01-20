@@ -85,15 +85,26 @@ TEST_F(server_test, manual_request_router) {
 
   pixiu::request_router router;
   router.get("/", params<int, float>("a", "b"), 
-    [](const auto& session, int a, float b) {
+    [](const auto& ctx, int a, float b) {
       return pixiu::make_response(std::to_string(a + b));
     }
   );
   router.get("/session_id", 
-    [](const auto& session) {
-      return pixiu::make_response(session.sid);
+    [](const auto& ctx) {
+      return pixiu::make_response(ctx.sid);
     }
   );
+  router.get("/incr", [](const auto& ctx){
+    auto& sn = ctx.session();
+    if(auto iter = sn.find("counter"); iter == sn.end()) {
+      sn["counter"] = 0;
+    } else {
+      sn["counter"] = sn["counter"].template get<int>() + 1;
+    }
+    return pixiu::make_response(
+      std::to_string(sn["counter"].template get<int>())
+    );
+  });
 
   auto server = pixiu::make_server(router);
   server.listen("0.0.0.0", 8080);
@@ -124,7 +135,7 @@ TEST_F(server_test, manual_request_router) {
       );
       std::cout << reps.at(0) << std::endl;
       auto str = buffers_to_string(reps.at(0).body().data());
-      auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
+      auto set_cookie = reps.at(0)[http::field::set_cookie];
       EXPECT_GT(str.size(), 0);
       EXPECT_GT(set_cookie.size(), 0);
     }
@@ -142,6 +153,36 @@ TEST_F(server_test, manual_request_router) {
       std::cout << reps.at(0) << std::endl;
       auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
       EXPECT_NE(set_cookie, "qsefthuk90");
+    }
+    {
+      std::string cookie_str;
+      std::vector<http::response<http::dynamic_body>> reps;
+      for(int i = 0; i < 5; i++) {
+        if(i == 0) {
+          reps = client.async_read(
+            "localhost", "8080", 
+            11, {
+              {"/incr", http::verb::get}
+            },
+            yield 
+          );
+        } else {
+          reps = client.async_read(
+            "localhost", "8080", 
+            11, {
+              {"/incr", http::verb::get}
+            }, 
+            [&](auto&& req) {
+              req.set(http::field::cookie, cookie_str);
+            },
+            yield 
+          );
+        }
+        std::cout << reps.at(0) << '\n';
+        cookie_str = reps.at(0)[http::field::set_cookie];
+        auto str = buffers_to_string(reps.at(0).body().data());
+        EXPECT_EQ(str, std::to_string(i));
+      }
     }
   });
 }

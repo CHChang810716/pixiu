@@ -44,11 +44,11 @@ struct session_storage {
   }
   request req;
   std::string sid;
-private:
   static nlohmann::json& g_session_data() {
     static nlohmann::json data;
     return data;
   }
+private:
   static std::string __random_char_pool() {
     std::string str;
     for(char c = 'a'; c < 'z'; c++) {
