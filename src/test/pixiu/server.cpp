@@ -36,7 +36,9 @@ auto client_run(ServIOC& serv_ioc, Func&& func) {
   });
   boost::asio::io_context ioc2;
   auto client = pixiu::make_client(ioc2);
-  func(client);
+  boost::asio::spawn(ioc2, [&](auto yield){
+    func(client, yield);
+  });
   ioc2.run();
   t.join();
 }
@@ -96,44 +98,50 @@ TEST_F(server_test, manual_request_router) {
   auto server = pixiu::make_server(router);
   server.listen("0.0.0.0", 8080);
 
-  client_run(server, [&test_actual](auto& client){
-    client.async_read(
-      "localhost", "8080", 
-      11, {
-        {"/", http::verb::get, {
-          {"a", 12},
-          {"b", 2.4}
-        } }
-      }, 
-      [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
-        test_actual = buffers_to_string(reps.at(0).body().data());
-        EXPECT_LT(std::abs(std::stod(test_actual) - 14.4), 0.01);
-      }
-    );
-    client.async_read(
-      "localhost", "8080", 
-      11, {
-        {"/session_id", http::verb::get}
-      }, 
-      [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
-        std::cout << reps.at(0) << std::endl;
-        auto str = buffers_to_string(reps.at(0).body().data());
-        auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
-        EXPECT_GT(str.size(), 0);
-        EXPECT_GT(set_cookie.size(), 0);
-      }
-    );
-    client.async_read(
-      "localhost", "8080", 
-      11, {
-        {"/session_id", http::verb::get}
-      }, 
-      [&test_actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
-        std::cout << reps.at(0) << std::endl;
-      },
-      [](auto&& req) {
-        req.set(http::field::cookie, "pixiu_session_id=qsefthuk90");
-      }
-    );
+  client_run(server, [&test_actual](auto& client, auto yield){
+    boost::system::error_code ec;
+    {
+      auto reps = client.async_read(
+        "localhost", "8080", 
+        11, {
+          {"/", http::verb::get, {
+            {"a", 12},
+            {"b", 2.4}
+          } }
+        }, 
+        yield[ec]
+      );
+      test_actual = buffers_to_string(reps.at(0).body().data());
+      EXPECT_LT(std::abs(std::stod(test_actual) - 14.4), 0.01);
+    }
+    {
+      auto reps = client.async_read(
+        "localhost", "8080", 
+        11, {
+          {"/session_id", http::verb::get}
+        }, 
+        yield
+      );
+      std::cout << reps.at(0) << std::endl;
+      auto str = buffers_to_string(reps.at(0).body().data());
+      auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
+      EXPECT_GT(str.size(), 0);
+      EXPECT_GT(set_cookie.size(), 0);
+    }
+    {
+      auto reps = client.async_read(
+        "localhost", "8080", 
+        11, {
+          {"/session_id", http::verb::get}
+        }, 
+        [](auto&& req) {
+          req.set(http::field::cookie, "pixiu_session_id=qsefthuk90");
+        },
+        yield 
+      );
+      std::cout << reps.at(0) << std::endl;
+      auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
+      EXPECT_NE(set_cookie, "qsefthuk90");
+    }
   });
 }

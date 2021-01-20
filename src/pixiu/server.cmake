@@ -6,6 +6,7 @@ target_link_libraries(${AKT_TARGET} PUBLIC
   Boost::coroutine
   Boost::context
   Boost::thread
+  pixiu-utils
 )
 if(MINGW)
   target_link_libraries(${AKT_TARGET} PUBLIC 

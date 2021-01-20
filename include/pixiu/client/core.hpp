@@ -35,26 +35,25 @@ public:
     core()
     : ioc_()
     {}
-    template<class CompletionToken, class ReqProc>
-    auto async_read(
+    template<class ReadHandler, class ReqProc>
+    BOOST_ASIO_INITFN_RESULT_TYPE(
+        ReadHandler, void(error_code, responses))
+    async_read(
         const std::string& host,
         const std::string& port,
         int version,
         std::vector<request_param> req_vec,
-        CompletionToken&& token,
+        ReadHandler&& handler,
         ReqProc&& req_proc
     ) {
         namespace http = boost::beast::http;
-        using Sig = void(error_code, responses);
-        using Result = __asio::async_result<CompletionToken, Sig>;
-        using Handler = typename Result::completion_handler_type;
-        Handler handler(std::forward<CompletionToken>(token));
-        Result result(handler);
+        BOOST_BEAST_HANDLER_INIT(
+            ReadHandler, void(error_code, responses));
         boost::asio::spawn(ioc_, [
             req_vec = std::move(req_vec),
             this, __self = this->shared_from_this(),
             host, port, version,
-            handler, req_proc = std::move(req_proc)
+            handler = std::move(init.completion_handler), req_proc = std::move(req_proc)
         ](boost::asio::yield_context yield){
             boost::system::error_code ec;
             tcp::resolver   resolver    {ioc_};
@@ -65,7 +64,7 @@ public:
             );
             if(ec) {
                 logger().error("resolve failed");
-                return handler(ec, std::move(reps));
+                return remove_const(handler)(ec, std::move(reps));
             }
 
             boost::asio::async_connect(socket, 
@@ -74,7 +73,7 @@ public:
             );
             if(ec) {
                 logger().error("connect failed");
-                return handler(ec, std::move(reps));
+                return remove_const(handler)(ec, std::move(reps));
             }
 
             for(auto& req_param : req_vec) {
@@ -83,7 +82,7 @@ public:
                 http::async_write(socket, req, yield[ec]);
                 if(ec) {
                     logger().error("request failed");
-                    return handler(ec, std::move(reps));
+                    return remove_const(handler)(ec, std::move(reps));
                 }
             }
 
@@ -96,11 +95,11 @@ public:
 
             if(ec && ec != boost::system::errc::not_connected) {
                 logger().error("connection shutdown not gracefully");
-                return handler(ec, std::move(reps));
+                return remove_const(handler)(ec, std::move(reps));
             }
-            return handler(ec, std::move(reps));
+            return remove_const(handler)(ec, std::move(reps));
         });
-        return result.get();
+        return init.result.get();
     }
     
     void run() {ioc_.run();}

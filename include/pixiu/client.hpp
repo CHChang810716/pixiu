@@ -28,8 +28,8 @@ struct client {
       const std::string& port,
       int version,
       std::vector<request> req_vec,
-      CompletionToken&& token,
-      ReqProc&& req_proc
+      ReqProc&& req_proc,
+      CompletionToken&& token
   ) {
     return impl_->async_read(host, port, version, std::move(req_vec), 
       std::forward<CompletionToken>(token), 

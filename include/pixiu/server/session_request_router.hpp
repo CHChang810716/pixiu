@@ -25,8 +25,10 @@ struct session_storage {
       return g_session_data()[std::string{sid.begin(), sid.end()}];
     }
     if(req.has_session_id()) {
-      const_cast<std::string&>(sid) = req.session_id();
-      return g_session_data()[std::string{sid.begin(), sid.end()}];
+      if(g_session_data().find(req.session_id()) != g_session_data().end()) {
+        const_cast<std::string&>(sid) = req.session_id();
+        return g_session_data()[std::string{sid.begin(), sid.end()}];
+      }
     }
     auto& g_s = g_session_data();
 
