@@ -59,7 +59,7 @@ constexpr struct server_maker {
     return res;
   }
   template<class RequestRouter = server_bits::session_request_router>
-  auto operator()(RequestRouter&& rr = server_bits::request_router()) const {
+  auto operator()(RequestRouter&& rr = server_bits::session_request_router()) const {
     using server_t = server<boost::asio::io_context, RequestRouter>;
     server_t res;
     res.impl_.reset(new typename server_t::core(
