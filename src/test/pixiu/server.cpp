@@ -105,6 +105,9 @@ TEST_F(server_test, manual_request_router) {
       std::to_string(sn["counter"].template get<int>())
     );
   });
+  router.get("/articles/(.+)", [](const auto& ctx){
+    return pixiu::make_response(ctx.url_capt.at(0));
+  });
 
   auto server = pixiu::make_server(router);
   server.listen("0.0.0.0", 8080);
@@ -133,7 +136,6 @@ TEST_F(server_test, manual_request_router) {
         }, 
         yield
       );
-      std::cout << reps.at(0) << std::endl;
       auto str = buffers_to_string(reps.at(0).body().data());
       auto set_cookie = reps.at(0)[http::field::set_cookie];
       EXPECT_GT(str.size(), 0);
@@ -150,7 +152,6 @@ TEST_F(server_test, manual_request_router) {
         },
         yield 
       );
-      std::cout << reps.at(0) << std::endl;
       auto set_cookie = reps.at(0)[boost::beast::http::field::set_cookie];
       EXPECT_NE(set_cookie, "qsefthuk90");
     }
@@ -178,11 +179,21 @@ TEST_F(server_test, manual_request_router) {
             yield 
           );
         }
-        std::cout << reps.at(0) << '\n';
         cookie_str = reps.at(0)[http::field::set_cookie];
         auto str = buffers_to_string(reps.at(0).body().data());
         EXPECT_EQ(str, std::to_string(i));
       }
+    }
+    {
+      auto reps = client.async_read(
+        "localhost", "8080", 
+        11, {
+          {"/articles/startabc", http::verb::get}
+        }, 
+        yield
+      );
+      auto str = buffers_to_string(reps.at(0).body().data());
+      EXPECT_EQ(str, "startabc");
     }
   });
 }

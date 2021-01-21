@@ -44,6 +44,8 @@ struct session_storage {
   }
   request req;
   std::string sid;
+  std::vector<std::string> url_capt;
+
   static nlohmann::json& g_session_data() {
     static nlohmann::json data;
     return data;
@@ -168,11 +170,18 @@ struct session_request_router {
   void on_err_illegal_target(err_handler<>&& eh) {
     on_err_illegal_target_ = eh;
   }
-  auto search_handler(const std::string_view& target) const {
+  auto search_handler(
+    const std::string_view&   target, 
+    std::vector<std::string>& url_capts
+  ) const {
+    std::smatch m_url_capt;
     std::string s_target{ target.begin(), target.end() };
     for(auto&& [pattern, head, get] : on_target_requests_) {
       // logger().debug("search pattern: {}", pattern.str());
-      if(std::regex_match(s_target, std::regex(pattern))) {
+      if(std::regex_match(s_target, m_url_capt, pattern)) {
+        for(std::size_t i = 1; i < m_url_capt.size(); i ++) {
+          url_capts.push_back(m_url_capt[i].str());
+        }
         return std::make_tuple(head, get);
       }
     }
@@ -180,7 +189,7 @@ struct session_request_router {
   }
   template<class Func>
   auto operator()(
-    const session_storage&  session, 
+    session_storage&        session, 
     Func&&                  send
   ) const {
     auto& req = session.req;
@@ -199,7 +208,7 @@ struct session_request_router {
       logger().debug("request target: {}", std::string{ target.begin(), target.end() });
       auto query_start = target.find_first_of('?');
       auto target_without_query = target.substr(0, query_start);
-      auto handlers = search_handler(target_without_query);
+      auto handlers = search_handler(target_without_query, session.url_capt);
 
       session.session();
       // Respond to HEAD request
