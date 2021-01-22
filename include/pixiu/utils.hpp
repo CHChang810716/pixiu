@@ -4,12 +4,20 @@
 #include <vector>
 #include <string>
 #include <type_traits>
+#include <sstream>
 namespace std {
 
 std::string to_string (const std::string_view& sv);
 
 }
 namespace pixiu {
+
+template<class Msg>
+auto msg_to_string(Msg&& msg) {
+  std::stringstream ss;
+  ss << msg << '\n';
+  return ss.str();
+}
 
 template<class T>
 auto& remove_const(T& o) {

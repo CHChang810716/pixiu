@@ -92,7 +92,7 @@ protected:
           __http::async_read(derived()->stream(), req_buffer, session.req, yield[ec]);
           session.req.build_ext();
           pending_req_num_ += 1;
-          logger().debug("request received");
+          logger().debug("request received: {}", pixiu::msg_to_string(session.req));
           // timer close socket
           if(ec == __asio::error::operation_aborted) {
             logger().debug("request operation abort");

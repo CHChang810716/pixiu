@@ -7,6 +7,11 @@
 #include <thread>
 
 using namespace boost::beast;
+
+auto& logger() {
+  return pixiu::logger::get("testc");
+}
+
 class server_test 
 : public ::testing::Test 
 {
@@ -14,9 +19,9 @@ protected:
   static void SetUpTestCase() {
     nlohmann::json data;
     auto& loggers = data["loggers"];
-    // loggers["http"] = {
-    //   {"level", "debug"}
-    // };
+    loggers["http"] = {
+      {"level", "debug"}
+    };
     loggers["http_base"] = {
       {"level", "debug"}
     };
@@ -26,13 +31,22 @@ protected:
     loggers["request_router"] = {
       {"level", "debug"}
     };
+    loggers["client"] = {
+      {"level", "debug"}
+    };
+    loggers["testc"] = {
+      {"level", "debug"}
+    };
+    loggers["fiber"] = {
+      {"level", "debug"}
+    };
     pixiu::logger::config(data);
   }
 };
 template<class ServIOC, class Func>
 auto client_run(ServIOC& serv_ioc, Func&& func) {
   std::thread t([&serv_ioc](){
-    serv_ioc.run_for(std::chrono::seconds(5));
+    serv_ioc.run_for(std::chrono::seconds(25));
   });
   boost::asio::io_context ioc2;
   auto client = pixiu::make_client(ioc2);
@@ -79,6 +93,10 @@ TEST_F(server_test, router_call) {
       EXPECT_TRUE(std::abs(actual - 14.4) < 0.001);
     }
   });
+}
+template<class Rep>
+auto rep_to_string(Rep&& rep) {
+  return pixiu::msg_to_string(std::forward<Rep>(rep));
 }
 TEST_F(server_test, manual_request_router) {
   std::string test_actual;
