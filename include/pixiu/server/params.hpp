@@ -24,7 +24,7 @@ struct params
   : name_type_tuple_(std::make_pair(name, boost::hana::type<Type>())...)
   {}
 
-  auto parse(const boost::beast::string_view& target_str) const {
+  auto parse_get_url(const std::string_view& target_str) const {
     std::map<std::string_view, std::string_view> index;
     std::string_view target_view(target_str.data(), target_str.size());
     auto pos = target_view.find_first_of('?');
@@ -60,6 +60,19 @@ struct params
     return res;
   }
 
+  auto parse_post_body(const std::string& body) const {
+    auto json_param = nlohmann::json::parse(body);
+    auto res = boost::hana::transform(
+      name_type_tuple_, 
+      [&json_param](auto&& str_type){
+        using type = typename decltype(str_type.second)::type;
+        auto itr = json_param.find(str_type.first);
+        if(itr == json_param.end()) return type(); 
+        return itr->template get<type>();
+      }
+    );
+    return res;
+  }
 private:
   name_type_tuple_t<Type...> name_type_tuple_;
 };

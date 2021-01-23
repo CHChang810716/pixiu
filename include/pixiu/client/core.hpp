@@ -79,6 +79,7 @@ public:
             for(auto& req_param : req_vec) {
                 auto req = req_param.make_request(host, version);
                 req_proc(req);
+                logger().debug("{}", msg_to_string(req));
                 http::async_write(socket, req, yield[ec]);
                 if(ec) {
                     logger().error("request failed");

@@ -92,15 +92,17 @@ struct session_request_router {
 
   using head_handler          = std::function<void(response&, const session_storage&)>;
   using get_handler           = handler<>;
+  using post_handler          = handler<>;
 
   template<class... Args>
   using err_handler          = handler<const error::base&, Args...>;
   template<class... Args>
   using serv_err_handler     = handler<Args...>;
 
-  template<class... Handlers>
-  using handler_mapper        = std::vector<std::tuple<std::regex, Handlers...>>;
-  using target_request_mapper = handler_mapper<head_handler, get_handler>;
+  using request_handler      = std::tuple<
+    std::regex, head_handler, get_handler, post_handler
+  >;
+  using target_request_mapper = std::vector<request_handler>;
   using target_request_index  = std::map<std::string, std::size_t>;
 
   static auto& logger() {
@@ -118,18 +120,27 @@ struct session_request_router {
       return e.create_response(sn.req);
     };
   }
-  void get(const std::string& target_pattern, get_handler&& gh) {
+  template<int method_id, class Handler>
+  void add_handler(const std::string& target_pattern, Handler&& h) {
     auto iter = pattern_index_.find(target_pattern);
     if(iter == pattern_index_.end()) {
       pattern_index_[target_pattern] = on_target_requests_.size();
-      on_target_requests_.emplace_back(
-        std::regex(target_pattern.c_str()), 
-        head_handler(), 
-        std::move(gh)
-      );
+      request_handler handler;
+      std::get<0>(handler) = std::regex(target_pattern.c_str());
+      std::get<method_id + 1>(handler) = std::move(h);
+      on_target_requests_.emplace_back(std::move(handler));
     } else {
-      std::get<2>(on_target_requests_[iter->second]) = gh;
+      std::get<method_id + 1>(on_target_requests_[iter->second]) = std::move(h);
     }
+  }
+  void head(const std::string& target_pattern, head_handler&& hh) {
+    add_handler<0>(target_pattern, std::move(hh));
+  }
+  void get(const std::string& target_pattern, get_handler&& gh) {
+    add_handler<1>(target_pattern, std::move(gh));
+  }
+  void post(const std::string& target_pattern, post_handler&& ph) {
+    add_handler<2>(target_pattern, std::move(ph));
   }
   template<class... Type, class Func>
   void get(
@@ -138,25 +149,26 @@ struct session_request_router {
     Func&&                func
   ) {
     get(target, [p_t = std::move(param_types), func = std::move(func)](const auto& session) -> response {
-      auto params_tuple = p_t.parse(session.req.target());
+      auto params_tuple = p_t.parse_get_url(session.req.target());
       return boost::hana::unpack(params_tuple, [&session, &func](auto&&... args){
         return func(session, std::move(args)...);
       });
     });
-
   }
-  void head(const std::string& target_pattern, head_handler&& hh) {
-    auto iter = pattern_index_.find(target_pattern);
-    if(iter == pattern_index_.end()) {
-      pattern_index_[target_pattern] = on_target_requests_.size();
-      on_target_requests_.emplace_back(
-        std::regex(target_pattern.c_str()), 
-        std::move(hh), 
-        get_handler()
-      );
-    } else {
-      std::get<1>(on_target_requests_[iter->second]) = hh;
-    }
+  template<class... Type, class Func>
+  void post(
+    const std::string&    target, 
+    params<Type...>&&     param_types, 
+    Func&&                func
+  ) {
+    post(target, [p_t = std::move(param_types), func = std::move(func)](const auto& session) -> response {
+      std::string req_str = session.req.body();
+      logger().info("before parse: {}", req_str);
+      auto params_tuple = p_t.parse_post_body(req_str);
+      return boost::hana::unpack(params_tuple, [&session, &func](auto&&... args){
+        return func(session, std::move(args)...);
+      });
+    });
   }
   void on_err_unknown_method(err_handler<>&& eh) {
     on_err_unknown_method_ = eh;
@@ -176,13 +188,13 @@ struct session_request_router {
   ) const {
     std::smatch m_url_capt;
     std::string s_target{ target.begin(), target.end() };
-    for(auto&& [pattern, head, get] : on_target_requests_) {
+    for(auto&& [pattern, head, get, post] : on_target_requests_) {
       // logger().debug("search pattern: {}", pattern.str());
       if(std::regex_match(s_target, m_url_capt, pattern)) {
         for(std::size_t i = 1; i < m_url_capt.size(); i ++) {
           url_capts.push_back(m_url_capt[i].str());
         }
-        return std::make_tuple(head, get);
+        return std::make_tuple(head, get, post);
       }
     }
     throw error::target_not_found(s_target);
@@ -220,7 +232,13 @@ struct session_request_router {
             handlers
           );
         case __http::verb::get:
-          return method_case_get(
+          return method_case_general<1>(
+            session, 
+            std::move(send),
+            handlers
+          );
+        case __http::verb::post:
+          return method_case_general<2>(
             session, 
             std::move(send),
             handlers
@@ -242,6 +260,17 @@ struct session_request_router {
     }
   }
 private:
+  // static constexpr int verb_to_method_id(__http::verb method) {
+  //   switch(method) {
+  //     case __http::verb::head:    return 0;
+  //     case __http::verb::get:     return 1;
+  //     case __http::verb::post:    return 2;
+  //     case __http::verb::put:     return 3;
+  //     case __http::verb::delete_: return 4;
+  //     case __http::verb::patch:   return 5;
+  //     default:                    return 6;
+  //   }
+  // }
   void generic_header_config(response& rep, const session_storage& sn) const {
     auto& req = sn.req;
     rep.apply([&req, &sn](auto&& inter_rep){
@@ -262,18 +291,18 @@ private:
   template<class Func, class HandlerTuple>
   auto method_case_head(const session_storage& sn, Func&& send, HandlerTuple& handlers) const {
     logger().debug("head request");
-    auto [head_h, get_h] = handlers;
+    auto [head_h, get_h, post_h] = handlers;
     response rep;
     rep.emplace<__http::response<__http::empty_body>>();
     generic_header_config(rep, sn);
     head_h(rep, sn);
     return rep.write(send);
   }
-  template<class Func, class HandlerTuple>
-  auto method_case_get(const session_storage& sn, Func&& send, HandlerTuple& handlers) const {
+  template<int method_id, class Func, class HandlerTuple>
+  auto method_case_general(const session_storage& sn, Func&& send, HandlerTuple& handlers) const {
     logger().debug("get request");
-    auto [head_h, get_h] = handlers;
-    auto rep = get_h(sn);
+    auto [head_h, get_h, post_h] = handlers;
+    auto rep = std::get<method_id>(handlers)(sn);
     generic_header_config(rep, sn);
     if(head_h) {
       head_h(rep, sn);

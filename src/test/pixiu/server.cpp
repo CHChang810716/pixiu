@@ -28,7 +28,7 @@ protected:
     loggers["core"] = {
       {"level", "debug"}
     };
-    loggers["request_router"] = {
+    loggers["router"] = {
       {"level", "debug"}
     };
     loggers["client"] = {
@@ -62,7 +62,7 @@ TEST(params_test, parse) {
   params<int, float, std::string, std::uint16_t> parser(
     "integer", "float32", "str", "uint_16bit"
   );
-  auto tuple = parser.parse("www.asdf.com/mysite?integer=100&float32=3.414&str=qsefth&uint_16bit=65535");
+  auto tuple = parser.parse_get_url("www.asdf.com/mysite?integer=100&float32=3.414&str=qsefth&uint_16bit=65535");
   EXPECT_EQ(boost::hana::at_c<0>(tuple), int(100));
   EXPECT_TRUE(std::abs(boost::hana::at_c<1>(tuple) - float(3.414)) < 0.0001);
   EXPECT_EQ(boost::hana::at_c<2>(tuple), "qsefth");
@@ -126,6 +126,18 @@ TEST_F(server_test, manual_request_router) {
   router.get("/articles/(.+)", [](const auto& ctx){
     return pixiu::make_response(ctx.url_capt.at(0));
   });
+  router.post("/login", 
+    params<std::string, std::string>("user", "passwd"),
+    [](auto& ctx, const std::string& user, const std::string& passwd){
+      EXPECT_EQ(user, "john");
+      EXPECT_EQ(passwd, "qsefth");
+      return pixiu::make_response(nlohmann::json({
+        {"ec", 0},
+        {"msg", "login success"},
+        {"token", "azscfb"}
+      }));
+    }
+  );
 
   auto server = pixiu::make_server(router);
   server.listen("0.0.0.0", 8080);
@@ -212,6 +224,28 @@ TEST_F(server_test, manual_request_router) {
       );
       auto str = buffers_to_string(reps.at(0).body().data());
       EXPECT_EQ(str, "startabc");
+    }
+    {
+      auto reps = client.async_read(
+        "localhost", "8080", 
+        11, {
+          {"/login", http::verb::post}
+        }, 
+        [&](auto&& req) {
+          nlohmann::json form;
+          form["user"] = "john";
+          form["passwd"] = "qsefth";
+          auto str = form.dump();
+          logger().info(str);
+          req.body() = str;
+          req.set(http::field::content_type, "application/json");
+          req.set(http::field::content_length, str.length());
+        }, 
+        yield
+      );
+      auto str = buffers_to_string(reps.at(0).body().data());
+      logger().info(str);
+      // EXPECT_EQ(str, "startabc");
     }
   });
 }

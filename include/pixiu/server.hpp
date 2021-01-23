@@ -22,6 +22,13 @@ struct server
     impl_->request_router().get(std::forward<Args>(args)...);
     return *this;
   }
+  template<class... Args>
+  this_t& post(
+    Args&&... args
+  ) {
+    impl_->request_router().post(std::forward<Args>(args)...);
+    return *this;
+  }
 
   this_t& listen(tcp_endp ep) {
     impl_->listen(ep);

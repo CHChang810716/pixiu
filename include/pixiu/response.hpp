@@ -28,6 +28,9 @@ constexpr struct MakeResponse {
     res.content_length(size);
     return response(std::move(res));
   }
+  auto operator()(const nlohmann::json& json) const {
+    return string_view_impl(json.dump());
+  }
 private:
   response string_view_impl(const std::string_view& str) const {
     namespace http = boost::beast::http;
