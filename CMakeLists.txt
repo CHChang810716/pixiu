@@ -15,7 +15,7 @@ HunterGate(
 
 project(pixiu
     LANGUAGES C CXX 
-    VERSION 0.0.9.0
+    VERSION 0.0.10.0
 )
 
 hunter_add_package(Arkitekto)
