@@ -30,12 +30,11 @@ find_package(Boost
     REQUIRED
 )
 if(MINGW)
-    set(H_CMAKE_MODUE_PATH ${H_CMAKE_MODUE_PATH})
+    set(H_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
     unset(CMAKE_MODULE_PATH)
     find_package(OpenSSL REQUIRED)
-    set(CMAKE_MODULE_PATH ${H_CMAKE_MODUE_PATH})
+    set(CMAKE_MODULE_PATH ${H_CMAKE_MODULE_PATH})
 else()
-    hunter_add_package(OpenSSL)
     find_package(OpenSSL REQUIRED)
 endif()
 get_property(tmp_include_dirs
