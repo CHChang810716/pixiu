@@ -70,13 +70,13 @@ TEST(params_test, parse) {
 }
 
 TEST_F(server_test, router_call) {
-  pixiu::request_router router;
+  pixiu::request_router<> router;
   router.get("/", params<int, float>("a", "b"), 
     [](const auto& req, int a, float b) {
       return pixiu::make_response(std::to_string(a + b));
     }
   );
-  pixiu::server_bits::session_storage session;
+  pixiu::server_bits::session::context<> session;
   session.req = pixiu::make_request(
     http::verb::get,
     "localhost:8080","/", 
@@ -98,10 +98,13 @@ template<class Rep>
 auto rep_to_string(Rep&& rep) {
   return pixiu::msg_to_string(std::forward<Rep>(rep));
 }
+struct session_data {
+  int counter {0};
+};
 TEST_F(server_test, manual_request_router) {
   std::string test_actual;
 
-  pixiu::request_router router;
+  pixiu::request_router<session_data> router;
   router.get("/", params<int, float>("a", "b"), 
     [](const auto& ctx, int a, float b) {
       return pixiu::make_response(std::to_string(a + b));
@@ -114,13 +117,8 @@ TEST_F(server_test, manual_request_router) {
   );
   router.get("/incr", [](const auto& ctx){
     auto& sn = ctx.session();
-    if(auto iter = sn.find("counter"); iter == sn.end()) {
-      sn["counter"] = 0;
-    } else {
-      sn["counter"] = sn["counter"].template get<int>() + 1;
-    }
     return pixiu::make_response(
-      std::to_string(sn["counter"].template get<int>())
+      std::to_string(sn.counter ++)
     );
   });
   router.get("/articles/(.+)", [](const auto& ctx){

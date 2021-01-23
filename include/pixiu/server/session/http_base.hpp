@@ -24,7 +24,7 @@ private:
   using tcp_socket        = __asio::ip::tcp::socket;
   using flat_buffer       = boost::beast::flat_buffer;
   using request_router_t  = RequestRouter;
-  using session_storage   = typename request_router_t::session_storage;
+  using session_context   = typename request_router_t::session_context;
   using strand            = __asio::io_context::strand;
   static auto& logger() { return logger::get("http_base"); }
 public:
@@ -84,7 +84,7 @@ protected:
       // multi-part message is not support
       flat_buffer&      req_buffer = derived()->recv_buffer();
       error_code        ec          ;
-      session_storage   session     ;
+      session_context   session     ;
       try {
         while(!derived()->is_closed()) {
           // derived()->set_timer();
