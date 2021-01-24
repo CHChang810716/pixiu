@@ -46,11 +46,13 @@ protected:
 template<class ServIOC, class Func>
 auto client_run(ServIOC& serv_ioc, Func&& func) {
   std::thread t([&serv_ioc](){
-    serv_ioc.run_for(std::chrono::seconds(25));
+    serv_ioc.run_for(std::chrono::seconds(30));
   });
   boost::asio::io_context ioc2;
   auto client = pixiu::make_client(ioc2);
+  boost::asio::steady_timer serv_ready(ioc2, std::chrono::seconds(5));
   boost::asio::spawn(ioc2, [&](auto yield){
+    serv_ready.async_wait(yield);
     func(client, yield);
   });
   ioc2.run();
