@@ -9,6 +9,7 @@
 #include <pixiu/server/request.hpp>
 #include <random>
 #include <nlohmann/json.hpp>
+#include <boost/asio/spawn.hpp>
 
 namespace pixiu::server_bits::session {
 
@@ -21,6 +22,12 @@ struct context {
   using request     = pixiu::server_bits::request<__http::string_body>;
   using session_t   = Session;
   using g_session_t = std::map<std::string, session_t>;
+
+  context(boost::asio::yield_context y)
+  : yield_(y)
+  {}
+
+  context() = default;
 
   session_t& session() const {
     if(!sid.empty()) {
@@ -42,17 +49,19 @@ struct context {
       }
     }
     return g_session_data()[std::string{sid.begin(), sid.end()}];
-
   }
-  request req;
-  std::string sid;
-  std::vector<std::string> url_capt;
+  auto& get_yield_ctx() const { return yield_.value(); }
+
+  request                   req;
+  std::string               sid;
+  std::vector<std::string>  url_capt;
 
   static g_session_t& g_session_data() {
     static g_session_t data;
     return data;
   }
 private:
+  std::optional<boost::asio::yield_context> yield_;
   static std::string __random_char_pool() {
     std::string str;
     for(char c = 'a'; c < 'z'; c++) {

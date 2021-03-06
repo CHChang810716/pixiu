@@ -5,6 +5,7 @@
 #include <string>
 #include <type_traits>
 #include <sstream>
+#include <optional>
 namespace std {
 
 std::string to_string (const std::string_view& sv);
@@ -44,5 +45,11 @@ cookie_map parse_cookie(Str&& str) {
   return res;
 }
 
+using opt_str = std::optional<std::string>;
+
+template<class T> struct type_wrapper {};
+template<class T> struct remove_optional { using type = T; };
+template<class T> struct remove_optional<std::optional<T>> { using type = T; };
+template<class T> using remove_optional_t = typename remove_optional<T>::type;
   
 } // namespace pixiu

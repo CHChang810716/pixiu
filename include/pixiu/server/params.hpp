@@ -16,7 +16,14 @@ template<class... T>
 using name_type_tuple_t = boost::hana::tuple<
   std::pair<std_string<T>, boost::hana::type<T>>...
 >;
-
+template<class T, class Str>
+auto lexical_cast(type_wrapper<T> t, const Str& str) {
+  return boost::lexical_cast<T>(str);
+}
+template<class T, class Str>
+auto lexical_cast(type_wrapper<std::optional<T>> t, const Str& str) {
+  return lexical_cast(type_wrapper<T>{}, str);
+}
 template<class... Type>
 struct params 
 {
@@ -54,7 +61,7 @@ struct params
         auto itr = index.find(str_type.first);
         if(itr == index.end()) return type(); 
         auto& value_str = itr->second;
-        return boost::lexical_cast<type>(value_str); // TODO: should have a better solution
+        return type(lexical_cast(type_wrapper<type>{}, value_str)); // TODO: should have a better solution
       }
     );
     return res;
@@ -65,10 +72,11 @@ struct params
     auto res = boost::hana::transform(
       name_type_tuple_, 
       [&json_param](auto&& str_type){
-        using type = typename decltype(str_type.second)::type;
+        using type_may_opt = typename decltype(str_type.second)::type;
+        using type = remove_optional_t<type_may_opt>;
         auto itr = json_param.find(str_type.first);
-        if(itr == json_param.end()) return type(); 
-        return itr->template get<type>();
+        if(itr == json_param.end()) return type_may_opt(); 
+        return type_may_opt(itr->template get<type>());
       }
     );
     return res;

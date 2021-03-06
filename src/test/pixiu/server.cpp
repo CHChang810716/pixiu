@@ -107,9 +107,12 @@ TEST_F(server_test, manual_request_router) {
   std::string test_actual;
 
   pixiu::request_router<session_data> router;
-  router.get("/", params<int, float>("a", "b"), 
-    [](const auto& ctx, int a, float b) {
-      return pixiu::make_response(std::to_string(a + b));
+  router.get("/", params<
+    int, 
+    std::optional<float>
+  >("a", "b"), 
+    [](const auto& ctx, int a, std::optional<float> b) {
+      return pixiu::make_response(std::to_string(a + b.value_or(-0.5)));
     }
   );
   router.get("/session_id", 
@@ -127,8 +130,14 @@ TEST_F(server_test, manual_request_router) {
     return pixiu::make_response(ctx.url_capt.at(0));
   });
   router.post("/login", 
-    params<std::string, std::string>("user", "passwd"),
-    [](auto& ctx, const std::string& user, const std::string& passwd){
+    params<
+      std::string, 
+      std::optional<std::string>
+    >("user", "passwd"),
+    [](auto& ctx, 
+      const std::string& user, 
+      const std::optional<std::string>& passwd
+    ){
       EXPECT_EQ(user, "john");
       EXPECT_EQ(passwd, "qsefth");
       return pixiu::make_response(nlohmann::json({

@@ -25,6 +25,9 @@ void config_logger() {
     loggers["fiber"] = {
       {"level", "debug"}
     };
+    loggers["gauth"] = {
+      {"level", "debug"}
+    };
     pixiu::logger::config(data);
 }
 int main(int argc, char* argv[]) {
@@ -37,8 +40,8 @@ int main(int argc, char* argv[]) {
     boost::asio::ssl::context ssl_ctx{ssl::context::sslv23};
     load_server_certificate(ssl_ctx);
     server.set_tls_context(ssl_ctx);
-    server.get("/", [](const auto& req) -> pixiu::server_bits::response {
-      pixiu::logger::get("app").debug("root target: {}", req.target().to_string());
+    server.get("/", [](const auto& ctx) -> pixiu::server_bits::response {
+      pixiu::logger::get("app").debug("root target: {}", std::to_string(ctx.req.target()));
       return pixiu::make_response("hello world");
     });
     server.listen("0.0.0.0", 8080);

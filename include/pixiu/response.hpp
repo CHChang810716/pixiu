@@ -2,6 +2,8 @@
 #include "server/response.hpp"
 #include <boost/filesystem.hpp>
 #include <string_view>
+#include <nlohmann/json.hpp>
+
 namespace pixiu {
 
 using response = server_bits::response;
@@ -40,5 +42,15 @@ private:
     return response(std::move(rep));
   }
 } make_response;
+
+constexpr struct MakeRedirect {
+  auto operator()(const std::string& uri) const {
+    namespace http = boost::beast::http;
+    http::response<http::empty_body> rep;
+    rep.result(302);
+    rep.set(http::field::location, uri);
+    return response(rep);
+  }
+} make_redirect;
 
 }

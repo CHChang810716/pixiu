@@ -277,18 +277,19 @@ private:
   void generic_header_config(response& rep, const session_context& sn) const {
     auto& req = sn.req;
     rep.apply([&req, &sn](auto&& inter_rep){
+      inter_rep.version(req.version());
       if(inter_rep.result() == __http::status::unknown) {
         inter_rep.result(__http::status::ok);
       }
-      inter_rep.version(req.version());
       auto itr = inter_rep.find(__http::field::server);
       if(itr == inter_rep.end()) {
         inter_rep.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
       }
-      inter_rep.keep_alive(req.keep_alive());
       inter_rep.set(__http::field::set_cookie, 
         fmt::format("{}={}", session_id_key, sn.sid)
       );
+      if(inter_rep.result() == __http::status::found) return;
+      inter_rep.keep_alive(req.keep_alive());
     });
   }
   template<class Func, class HandlerTuple>

@@ -83,8 +83,9 @@ protected:
       // currently we only focus on short message
       // multi-part message is not support
       flat_buffer&      req_buffer = derived()->recv_buffer();
-      error_code        ec          ;
-      session_context   session     ;
+      error_code        ec            ;
+      session_context   session(yield);
+
       try {
         while(!derived()->is_closed()) {
           // derived()->set_timer();

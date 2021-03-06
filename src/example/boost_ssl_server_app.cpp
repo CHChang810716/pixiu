@@ -30,6 +30,7 @@
 #include <thread>
 #include <vector>
 #include "load_server_certificate.hpp"
+#include <pixiu/utils.hpp>
 
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
@@ -109,8 +110,8 @@ path_cat(
     boost::beast::string_view path)
 {
     if(base.empty())
-        return path.to_string();
-    std::string result = base.to_string();
+        return std::to_string(path);
+    std::string result = std::to_string(base);
 #if BOOST_MSVC
     char constexpr path_separator = '\\';
     if(result.back() == path_separator)
@@ -149,7 +150,7 @@ handle_request(
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = why.to_string();
+        res.body() = std::to_string(why);
         res.prepare_payload();
         return res;
     };
@@ -162,7 +163,7 @@ handle_request(
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = "The resource '" + target.to_string() + "' was not found.";
+        res.body() = "The resource '" + std::to_string(target) + "' was not found.";
         res.prepare_payload();
         return res;
     };
@@ -175,7 +176,7 @@ handle_request(
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = "An error occurred: '" + what.to_string() + "'";
+        res.body() = "An error occurred: '" + std::to_string(what) + "'";
         res.prepare_payload();
         return res;
     };

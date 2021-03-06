@@ -5,8 +5,17 @@
     "cmake.configureSettings": {
         "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/stage",
         "CMAKE_SKIP_INSTALL_RPATH": "ON",
-        "BUILD_TEST": "ON"
+        "BUILD_TEST": "ON",
+        "BUILD_EXAMPLE": "ON"
     },
     "cmake.buildDirectory": "${workspaceFolder}/build",
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "*.ipp": "cpp",
+        "*.tcc": "cpp",
+        "future": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "typeinfo": "cpp"
+    }
 }
