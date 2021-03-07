@@ -37,3 +37,26 @@ TEST_F(client_test, async_read_test) {
   std::string expect((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
   EXPECT_EQ(expect, actual);
 }
+TEST_F(client_test, ssl_async_read_test) {
+  using namespace boost::beast;
+  using namespace boost::asio;
+  std::string actual;
+  io_context ioc;
+  ssl::context ssl_ctx{ssl::context::sslv23_client};
+  auto client = pixiu::make_ssl_client(ioc);
+  client.set_ssl_context(std::move(ssl_ctx));
+  client.async_read(
+    "www.google.com", "443", 
+    11, {
+      {"/", http::verb::get, {} }
+    }, 
+    [&actual](boost::system::error_code ec, pixiu::client_bits::responses reps){
+      actual = buffers_to_string(reps.at(0).body().data());
+    }
+  );
+  ioc.run();
+  std::cout << actual << std::endl;
+  // std::ifstream fin((pixiu::path.test_data() / "client_test_site.txt").string());
+  // std::string expect((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
+  // EXPECT_EQ(expect, actual);
+}

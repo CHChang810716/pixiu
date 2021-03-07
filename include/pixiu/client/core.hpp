@@ -53,7 +53,8 @@ public:
             req_vec = std::move(req_vec),
             this, __self = this->shared_from_this(),
             host, port, version,
-            handler = std::move(init.completion_handler), req_proc = std::move(req_proc)
+            handler = std::move(init.completion_handler), 
+            req_proc = std::move(req_proc)
         ](boost::asio::yield_context yield){
             boost::system::error_code ec;
             tcp::resolver   resolver    {ioc_};

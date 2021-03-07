@@ -1,15 +1,40 @@
 #pragma once
-#include "client/core.hpp"
+#include "client/http.hpp"
+#include "client/https.hpp"
 
 namespace pixiu {
+namespace client_bits::mode {
+struct ssl {
+  template<class IOContextAR>
+  using core = client_bits::https<IOContextAR>;
 
-template<class IOContextAR>
-struct client {
+  template<class Derived>
+  struct base {
+    void set_ssl_context(boost::asio::ssl::context&& ssl_ctx) {
+      static_cast<Derived*>(this)->impl_->set_ssl_context(std::move(ssl_ctx));
+    }
+  };
+};
+struct plain {
+  template<class IOContextAR>
+  using core = client_bits::http<IOContextAR>;
+
+  template<class Derived>
+  struct base {};
+};
+}
+template<class IOContextAR, class mode = client_bits::mode::plain>
+struct client
+: public mode::template base<client<IOContextAR, mode>> 
+{
   friend struct client_maker;
-  using request = client_bits::request_param;
-  using core = client_bits::core<IOContextAR>;
-  using core_ptr = std::shared_ptr<core>;
-  using this_t = client<IOContextAR>;
+  friend struct ssl_client_maker;
+  template<class Derived>
+  friend struct client_bits::mode::ssl::base;
+  using request   = client_bits::request_param;
+  using core      = typename mode::template core<IOContextAR>;
+  using core_ptr  = std::shared_ptr<core>;
+  using this_t    = client<IOContextAR>;
   
   template<class CompletionToken>
   auto async_read(
@@ -58,4 +83,21 @@ constexpr struct client_maker {
   }
 
 } make_client;
+
+constexpr struct ssl_client_maker {
+  template<class IOContext>
+  auto operator()(IOContext& ioc) const {
+    using client_t = client<IOContext&, client_bits::mode::ssl>;
+    client_t res;
+    res.impl_.reset(new typename client_t::core(ioc));
+    return res;
+  }
+  auto operator()() const {
+    using client_t = client<boost::asio::io_context, client_bits::mode::ssl>;
+    client_t res;
+    res.impl_.reset(new typename client_t::core());
+    return res;
+  }
+
+} make_ssl_client;
 }
