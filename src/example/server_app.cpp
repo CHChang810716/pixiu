@@ -30,6 +30,9 @@ void config_logger() {
     loggers["gauth"] = {
       {"level", "debug"}
     };
+    loggers["client"] = {
+      {"level", "debug"}
+    };
     pixiu::logger::config(data);
 }
 struct session {
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
     });
     server.get("/", [](const auto& ctx) -> pixiu::server_bits::response {
       logger().debug("root target: {}", std::to_string(ctx.req.target()));
-      if(ctx.session().google_auth) {
+      if(!ctx.session().google_auth.is_null()) {
         logger().debug("google auth data found!!!");
       } else {
         logger().debug("google auth data not ready...");

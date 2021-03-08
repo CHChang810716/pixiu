@@ -120,6 +120,7 @@ public:
           return remove_const(handler)(ec, std::move(reps));
         }
       }
+      ec.assign(0, ec.category());
       return remove_const(handler)(ec, std::move(reps));
     });
     return init.result.get();

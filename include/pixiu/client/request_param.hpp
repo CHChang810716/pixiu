@@ -23,11 +23,23 @@ struct request_param {
         request.set(http::field::host, host);
         request.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
         std::string uri{target.begin(), target.end()};
-        char spliter = '?';
+        std::string param_str;
+        std::string spliter = "";
         for(auto itr = param.begin(); itr != param.end(); itr++) {
-            uri += spliter;
-            uri += fmt::format("{}={}", itr.key(), itr.value().dump());
-            spliter = '&';
+            param_str += spliter;
+            if(itr.value().is_string()) {
+                param_str += fmt::format("{}={}", itr.key(), itr.value().get<std::string>());
+            } else {
+                param_str += fmt::format("{}={}", itr.key(), itr.value().dump());
+            }
+            spliter = "&";
+        }
+        if(method == http::verb::get) {
+            uri += ("?" + param_str);
+        } else if (method == http::verb::post) {
+            request.set(http::field::content_type, "application/x-www-form-urlencoded");
+            request.content_length(param_str.size());
+            request.body() = param_str;
         }
         request.target(uri);
         return request;

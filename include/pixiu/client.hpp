@@ -100,4 +100,7 @@ constexpr struct ssl_client_maker {
   }
 
 } make_ssl_client;
+
+template<class IOC>
+using ssl_client = client<IOC, client_bits::mode::ssl>;
 }

@@ -9,13 +9,14 @@
         "BUILD_EXAMPLE": "ON"
     },
     "cmake.buildDirectory": "${workspaceFolder}/build",
-    "cmake.configureOnOpen": false,
+    "cmake.configureOnOpen": true,
     "files.associations": {
         "*.ipp": "cpp",
         "*.tcc": "cpp",
         "future": "cpp",
         "istream": "cpp",
         "ostream": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "string_view": "cpp"
     }
 }

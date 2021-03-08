@@ -24,13 +24,18 @@ struct gauth_core {
     const std::string&    redirect_uri,
     const std::string&    scope
   ) 
-  : io_context_     (ioc              ) 
-  , greq_           (make_client(ioc) ) 
-  , redirect_uri_   (redirect_uri     ) 
-  , response_type_  ("code"           )
-  , scope_          (scope            ) 
-  , gconfig_        (config           )
-  {}
+  : io_context_     (ioc                  ) 
+  , greq_           (make_ssl_client(ioc) ) 
+  , redirect_uri_   (redirect_uri         ) 
+  , response_type_  ("code"               )
+  , scope_          (scope                ) 
+  , gconfig_        (config               )
+  {
+    boost::asio::ssl::context ssl_ctx{
+      boost::asio::ssl::context::sslv23_client
+    };
+    greq_.set_ssl_context(std::move(ssl_ctx));
+  }
   template<class Ctx>
   auto callback(
     const Ctx&          ctx, 
@@ -73,7 +78,7 @@ struct gauth_core {
       logger().debug("code found, send token request to google");
       boost::system::error_code ec;
       auto reps = greq_.async_read(
-        "oauth2.googleapis.com", "80", 11, {
+        "oauth2.googleapis.com", "443", 11, {
           {"/token", http::verb::post, {
             {"code",          code.value()            },
             {"client_id",     gconfig_.client_id      },
@@ -85,13 +90,21 @@ struct gauth_core {
         ctx.get_yield_ctx()[ec]
       );
       logger().debug("token request finish, check error");
+      if(ec) {
+        logger().error(ec.message());
+      }
       error_code_throw(ec);
       logger().debug("no error found, save result to session");
       logger().debug("google token response: {}", msg_to_string(reps.at(0)));
       auto gauth_str = boost::beast::buffers_to_string(reps.at(0).body().data());
       logger().debug("gauth_str: {}", gauth_str);
-      auto gauth_js = nlohmann::json::parse(gauth_str);
-      ctx.session().google_auth = gauth_js;
+      try {
+        auto gauth_js = nlohmann::json::parse(gauth_str);
+        logger().debug("gauth_js: {}", gauth_js.dump());
+        ctx.session().google_auth = gauth_js;
+      } catch (const std::exception& e){
+        logger().error(e.what());
+      }
       return make_redirect(verified_redirect);
     }
   }
@@ -104,12 +117,12 @@ struct gauth_core {
   opt_str login_hint                ;
   opt_str prompt                    ;
 private:
-  IOContextAR&                  io_context_     ;
-  pixiu::client<IOContextAR&>   greq_           ;
-  const std::string             redirect_uri_   ;
-  const std::string             response_type_  ;
-  const std::string             scope_          ;
-  const gauth_gconfig&          gconfig_        ;
+  IOContextAR&                    io_context_     ;
+  pixiu::ssl_client<IOContextAR&> greq_           ;
+  const std::string               redirect_uri_   ;
+  const std::string               response_type_  ;
+  const std::string               scope_          ;
+  const gauth_gconfig&            gconfig_        ;
   
 };
 
