@@ -47,6 +47,10 @@ int main(int argc, char* argv[]) {
   try {
     config_logger();
     pixiu::gauth_gconfig gauth_cfg {
+      // client_id,
+      // auth_uri,
+      // token_uri,
+      // client_secret,
     };
     /**
      * make a http server and listen to 8080 port
