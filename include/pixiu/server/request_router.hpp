@@ -20,70 +20,7 @@ namespace pixiu::server_bits {
 namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
 namespace __asio    = boost::asio         ;
-
-// struct session_storage {
-//   using request = pixiu::server_bits::request<__http::string_body>;
-//   nlohmann::json& session() const {
-//     if(!sid.empty()) {
-//       return g_session_data()[std::string{sid.begin(), sid.end()}];
-//     }
-//     if(req.has_session_id()) {
-//       if(g_session_data().find(req.session_id()) != g_session_data().end()) {
-//         const_cast<std::string&>(sid) = req.session_id();
-//         return g_session_data()[std::string{sid.begin(), sid.end()}];
-//       }
-//     }
-//     auto& g_s = g_session_data();
-// 
-//     while(true) {
-//       auto _sid = random_str(16);
-//       if(g_s.find(_sid) == g_s.end()) {
-//         const_cast<std::string&>(sid) = _sid;
-//         break;
-//       }
-//     }
-//     return g_session_data()[std::string{sid.begin(), sid.end()}];
-// 
-//   }
-//   request req;
-//   std::string sid;
-//   std::vector<std::string> url_capt;
-// 
-//   static nlohmann::json& g_session_data() {
-//     static nlohmann::json data;
-//     return data;
-//   }
-// private:
-//   static std::string __random_char_pool() {
-//     std::string str;
-//     for(char c = 'a'; c < 'z'; c++) {
-//       str.push_back(c);
-//     }
-//     for(char c = 'A'; c < 'Z'; c++) {
-//       str.push_back(c);
-//     }
-//     for(char c = '0'; c < '9'; c++) {
-//       str.push_back(c);
-//     }
-//     return str;
-//   }
-//   static std::string& random_char_pool() {
-//     static std::string data = __random_char_pool();
-//     return data;
-//   }
-//   static std::string random_str(int len) {
-//     static auto& char_pool = random_char_pool();
-//     static std::default_random_engine rng(std::random_device{}());
-//     static std::uniform_int_distribution<> dist(0, char_pool.size() - 1);
-//     std::string res;
-//     res.resize(len);
-//     for(int i = 0; i < len; i ++) {
-//       res[i] = char_pool[dist(rng)];
-//     }
-//     return res;
-//   }
-// };
-template<class Session = nlohmann::json>
+template<class Session = session::default_session>
 struct request_router {
 
   using session_context       = pixiu::server_bits::session::context<Session>;
@@ -225,7 +162,6 @@ struct request_router {
       auto target_without_query = target.substr(0, query_start);
       auto handlers = search_handler(target_without_query, session.url_capt);
 
-      session.session();
       // Respond to HEAD request
       switch(req.method()) {
         case __http::verb::head: 
@@ -286,7 +222,7 @@ private:
         inter_rep.set(__http::field::server, BOOST_BEAST_VERSION_STRING);
       }
       inter_rep.set(__http::field::set_cookie, 
-        fmt::format("{}={}", session_id_key, sn.sid)
+        fmt::format("{}={}", session_id_key, sn.session_id())
       );
       if(inter_rep.result() == __http::status::found) return;
       inter_rep.keep_alive(req.keep_alive());

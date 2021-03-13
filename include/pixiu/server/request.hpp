@@ -13,7 +13,7 @@ struct request : public boost::beast::http::request<Body, Fields> {
 
   using base_t::base_t;
 
-  const auto session_id() const {
+  const auto session_ids() const {
     return cm_.at(session_id_key);
   }
 

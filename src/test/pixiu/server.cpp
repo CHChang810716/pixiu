@@ -102,6 +102,7 @@ auto rep_to_string(Rep&& rep) {
 }
 struct session_data {
   int counter {0};
+  bool primary {false};
 };
 TEST_F(server_test, manual_request_router) {
   std::string test_actual;
@@ -117,7 +118,8 @@ TEST_F(server_test, manual_request_router) {
   );
   router.get("/session_id", 
     [](const auto& ctx) {
-      return pixiu::make_response(ctx.sid);
+      auto& ses = ctx.session();
+      return pixiu::make_response(ctx.session_id());
     }
   );
   router.get("/incr", [](const auto& ctx){

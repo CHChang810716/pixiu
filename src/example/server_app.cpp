@@ -37,6 +37,10 @@ void config_logger() {
 }
 struct session {
   nlohmann::json google_auth;
+  bool primary;
+  bool is_login() const {
+    return false;
+  }
 };
 auto& logger() {
   return pixiu::logger::get("app");

@@ -17,26 +17,53 @@ namespace __http    = boost::beast::http  ;
 namespace __beast   = boost::beast        ;
 namespace __asio    = boost::asio         ;
 
-template<class Session = nlohmann::json>
+struct default_session : public nlohmann::json {
+  bool primary {false};
+};
+
+template<class Session = default_session>
 struct context {
   using request     = pixiu::server_bits::request<__http::string_body>;
   using session_t   = Session;
   using g_session_t = std::map<std::string, session_t>;
+  using yield_t     = boost::asio::yield_context;
 
   context(boost::asio::yield_context y)
   : yield_(y)
   {}
 
   context() = default;
-
-  session_t& session() const {
-    if(!sid.empty()) {
-      return g_session_data()[std::string{sid.begin(), sid.end()}];
+  bool has_session() const {
+    return !sid_.empty();
+  }
+  bool is_login() const {
+    if(has_session()) return session().is_login();
+    else return false;
+  }
+  auto session_id() const {
+    if(!has_session()) {
+      session();
     }
+    return sid_;
+  }
+  session_t& session() const {
     if(req.has_session_id()) {
-      if(g_session_data().find(req.session_id()) != g_session_data().end()) {
-        const_cast<std::string&>(sid) = req.session_id();
-        return g_session_data()[std::string{sid.begin(), sid.end()}];
+      std::string first;
+      for(auto& id : req.session_ids()) {
+        if(auto iter = g_session_data().find(id); iter != g_session_data().end()) {
+          auto& ses = iter->second;
+          if(first.empty()) {
+            first = id;
+          }
+          if(ses.primary) {
+            const_cast<std::string&>(sid_) = id;
+            return ses;
+          }
+        }
+      }
+      if(!first.empty()) {
+        const_cast<std::string&>(sid_) = first;
+        return g_session_data()[first];
       }
     }
     auto& g_s = g_session_data();
@@ -44,16 +71,15 @@ struct context {
     while(true) {
       auto _sid = random_str(16);
       if(g_s.find(_sid) == g_s.end()) {
-        const_cast<std::string&>(sid) = _sid;
+        const_cast<std::string&>(sid_) = _sid;
         break;
       }
     }
-    return g_session_data()[std::string{sid.begin(), sid.end()}];
+    return g_session_data()[sid_];
   }
   auto& get_yield_ctx() const { return yield_.value(); }
 
   request                   req;
-  std::string               sid;
   std::vector<std::string>  url_capt;
 
   static g_session_t& g_session_data() {
@@ -61,7 +87,8 @@ struct context {
     return data;
   }
 private:
-  std::optional<boost::asio::yield_context> yield_;
+  std::optional<yield_t>    yield_ ;
+  std::string               sid_   ;
   static std::string __random_char_pool() {
     std::string str;
     for(char c = 'a'; c < 'z'; c++) {
